@@ -8,12 +8,12 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { LOCALE_ID } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeEsAr from '@angular/common/locales/es-AR';
-import { ShellComponent } from './app/features/shell/shell/shell.component';
+import { AppComponent } from './app/app.component';
 import { appRoutes } from './app/app.routes';
 
 registerLocaleData(localeEsAr);
 
-bootstrapApplication(ShellComponent, {
+bootstrapApplication(AppComponent, {
   providers: [
     provideRouter(appRoutes),
     provideHttpClient(withInterceptorsFromDi()),
