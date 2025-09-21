@@ -152,7 +152,7 @@
                 <div matListItemLine>
                   {{ reservation.contactName }} ·
                   <strong>
-                    {{ statusLabels[reservation.status] }}
+                    {{ getStatusLabel(reservation.status) }}
                   </strong>
                 </div>
                 <div matListItemMeta>
@@ -494,7 +494,7 @@
               <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let reservation">
                 <span class="status-chip" [ngClass]="statusClass(reservation)">
-                  {{ statusLabels[reservation.status] }}
+                  {{ getStatusLabel(reservation.status) }}
                 </span>
               </td>
             </ng-container>
@@ -555,7 +555,7 @@
               <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let reservation">
                 <span class="status-chip" [ngClass]="statusClass(reservation)">
-                  {{ statusLabels[reservation.status] }}
+                  {{ getStatusLabel(reservation.status) }}
                 </span>
               </td>
             </ng-container>
@@ -693,7 +693,7 @@
               <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let reservation">
                 <span class="status-chip" [ngClass]="statusClass(reservation)">
-                  {{ statusLabels[reservation.status] }}
+                  {{ getStatusLabel(reservation.status) }}
                 </span>
               </td>
             </ng-container>

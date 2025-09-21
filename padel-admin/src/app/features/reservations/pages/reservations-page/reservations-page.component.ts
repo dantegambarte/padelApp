@@ -6,6 +6,9 @@ import {
   NgClass,
   NgFor,
   NgIf,
+  NgSwitch,
+  NgSwitchCase,
+  NgSwitchDefault,
 } from '@angular/common';
 import { Component, DestroyRef, inject } from '@angular/core';
 import {
@@ -49,56 +52,16 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-
-type CalendarViewMode = 'month' | 'week' | 'day';
-
-interface AvailabilitySlot {
-  startTime: string;
-  endTime: string;
-  status: 'available' | 'reserved' | 'deposit' | 'blocked';
-  reservation?: Reservation;
-}
-
-interface CourtAvailability {
-  court: Court;
-  slots: AvailabilitySlot[];
-}
-
-interface WeekDayOverview {
-  date: Date;
-  label: string;
-  reservations: Reservation[];
-}
-
-interface ConflictWarning {
-  courtName: string;
-  date: string;
-  reservations: [Reservation, Reservation];
-}
-
-interface ReminderItem {
-  reservation: Reservation;
-  daysToGo: number;
-}
-
-interface ReservationSummary {
-  isValid: boolean;
-  total: number;
-  deposit: number;
-  depositPercentage: number;
-  endTime?: string;
-  courtName?: string;
-  players: string[];
-}
-
-interface FilterFormValue {
-  viewMode: CalendarViewMode;
-  courtId: string;
-  duration: number | null;
-  status: 'all' | ReservationStatus;
-  range: { start: Date | null; end: Date | null } | null;
-  search: string | null;
-}
+import {
+  AvailabilitySlot,
+  CalendarViewMode,
+  ConflictWarning,
+  CourtAvailability,
+  FilterFormValue,
+  ReminderItem,
+  ReservationSummary,
+  WeekDayOverview,
+} from '../../models/reservations-page.models';
 
 @Component({
   selector: 'app-reservations-page',
@@ -107,6 +70,9 @@ interface FilterFormValue {
     NgIf,
     NgFor,
     NgClass,
+    NgSwitch,
+    NgSwitchCase,
+    NgSwitchDefault,
     AsyncPipe,
     DatePipe,
     CurrencyPipe,
@@ -243,7 +209,8 @@ export class ReservationsPageComponent {
   );
 
   private readonly filterValue$ = this.filterForm.valueChanges.pipe(
-    startWith(this.filterForm.getRawValue() as FilterFormValue)
+    startWith(this.filterForm.getRawValue()),
+    map(() => this.filterForm.getRawValue() as FilterFormValue)
   );
 
   readonly filteredReservations$ = combineLatest([
@@ -415,6 +382,10 @@ export class ReservationsPageComponent {
     bloqueada: 'Bloqueada por el club',
   };
 
+  getStatusLabel(status: ReservationStatus): string {
+    return this.statusLabels[status];
+  }
+
   constructor() {
     this.reservas$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -460,7 +431,7 @@ export class ReservationsPageComponent {
     this.onDateSelected(newDate);
   }
 
-  onDateSelected(date: Date) {
+  onDateSelected(date: Date | null) {
     if (!date) {
       return;
     }
@@ -563,13 +534,14 @@ export class ReservationsPageComponent {
     if (!confirm(message)) {
       return;
     }
-    const action =
-      reservation.status === 'bloqueada'
-        ? this.reservationService.remove(reservation.id)
-        : this.reservationService.cancelReservation(reservation.id);
-    action.subscribe(() => {
-      const label = reservation.status === 'bloqueada' ? 'Bloqueo eliminado' : 'Reserva cancelada';
-      this.snackBar.open(label, 'Cerrar', { duration: 3000 });
+    if (reservation.status === 'bloqueada') {
+      this.reservationService.remove(reservation.id).subscribe(() => {
+        this.snackBar.open('Bloqueo eliminado', 'Cerrar', { duration: 3000 });
+      });
+      return;
+    }
+    this.reservationService.cancelReservation(reservation.id).subscribe(() => {
+      this.snackBar.open('Reserva cancelada', 'Cerrar', { duration: 3000 });
     });
   }
 
