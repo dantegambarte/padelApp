@@ -1,7 +1,10 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { Court } from '../../../shared/models/court';
-import { Reservation, ReservationStatus } from '../../../shared/models/reservation';
+import {
+  Reservation,
+  ReservationStatus,
+} from '../../../shared/models/reservation';
 
 export interface BlockSlotPayload {
   courtId: string;
@@ -130,9 +133,12 @@ export class ReservationService {
 
   readonly reservas$: Observable<Reservation[]> = this._reservas.asObservable();
   readonly courts$: Observable<Court[]> = this._courts.asObservable();
-  readonly depositPercentage$: Observable<number> = this._depositPercentage.asObservable();
-  readonly depositPolicy$: Observable<string> = this._depositPolicy.asObservable();
-  readonly autoReminders$: Observable<boolean> = this._autoReminders.asObservable();
+  readonly depositPercentage$: Observable<number> =
+    this._depositPercentage.asObservable();
+  readonly depositPolicy$: Observable<string> =
+    this._depositPolicy.asObservable();
+  readonly autoReminders$: Observable<boolean> =
+    this._autoReminders.asObservable();
 
   get depositPercentage(): number {
     return this._depositPercentage.value;
@@ -144,9 +150,7 @@ export class ReservationService {
 
   calculatePrice(courtId: string, durationMinutes: number): number {
     const court = this.getCourtById(courtId);
-    if (!court) {
-      return 0;
-    }
+    if (!court) return 0;
     return Math.round(((durationMinutes || 0) / 60) * court.pricePerHour);
   }
 
@@ -154,71 +158,62 @@ export class ReservationService {
     return Math.round(totalPrice * this._depositPercentage.value);
   }
 
-  addReservation(reservation: Reservation) {
+  addReservation(reservation: Reservation): Observable<void> {
     this._reservas.next([...this._reservas.value, reservation]);
-    return of(reservation);
+    return of(void 0);
   }
 
-  updateReservation(id: string, changes: Partial<Reservation>) {
-    let updatedReservation: Reservation | undefined;
+  private updateReservation(
+    id: string,
+    changes: Partial<Reservation>
+  ): Observable<void> {
     this._reservas.next(
-      this._reservas.value.map((reserva) => {
-        if (reserva.id !== id) {
-          return reserva;
-        }
-        updatedReservation = {
-          ...reserva,
-          ...changes,
-          updatedAt: new Date().toISOString(),
-        };
-        return updatedReservation;
-      })
+      this._reservas.value.map((reserva) =>
+        reserva.id === id
+          ? { ...reserva, ...changes, updatedAt: new Date().toISOString() }
+          : reserva
+      )
     );
-    return of(updatedReservation);
+    return of(void 0);
   }
 
-  cancelReservation(id: string) {
-    return this.updateReservation(id, {
-      status: 'cancelada',
-      depositPaid: false,
-    });
-  }
-
-  remove(id: string) {
-    let removed = false;
+  cancelReservation(id: string): Observable<void> {
     this._reservas.next(
-      this._reservas.value.filter((reserva) => {
-        if (reserva.id === id) {
-          removed = true;
-        }
-        return reserva.id !== id;
-      })
+      this._reservas.value.map((x) =>
+        x.id === id
+          ? { ...x, status: 'cancelada', updatedAt: new Date().toISOString() }
+          : x
+      )
     );
-    return of(removed);
+    return of(void 0);
   }
 
-  markDepositPaid(id: string) {
+  remove(id: string): Observable<void> {
+    this._reservas.next(
+      this._reservas.value.filter((reserva) => reserva.id !== id)
+    );
+    return of(void 0);
+  }
+
+  markDepositPaid(id: string): Observable<void> {
     return this.updateReservation(id, {
       depositPaid: true,
       status: 'confirmada',
     });
   }
 
-  markCompleted(id: string) {
-    return this.updateReservation(id, {
-      status: 'completada',
-    });
+  markCompleted(id: string): Observable<void> {
+    return this.updateReservation(id, { status: 'completada' });
   }
 
-  toggleReminder(id: string, remindersSent: boolean) {
+  toggleReminder(id: string, remindersSent: boolean): Observable<void> {
     return this.updateReservation(id, { remindersSent });
   }
 
-  blockSlot(payload: BlockSlotPayload) {
+  blockSlot(payload: BlockSlotPayload): Observable<void> {
     const court = this.getCourtById(payload.courtId);
-    if (!court) {
-      return of(undefined);
-    }
+    if (!court) return of(void 0);
+
     const reservation: Reservation = {
       id: this.createId(),
       courtId: payload.courtId,
@@ -239,33 +234,34 @@ export class ReservationService {
       createdAt: new Date().toISOString(),
     };
     this._reservas.next([...this._reservas.value, reservation]);
-    return of(reservation);
+    return of(void 0);
   }
 
-  updateDepositPercentage(percentage: number) {
+  updateDepositPercentage(percentage: number): Observable<void> {
     this._depositPercentage.next(percentage);
-    return of(percentage);
+    return of(void 0);
   }
 
-  updateDepositPolicy(policy: string) {
+  updateDepositPolicy(policy: string): Observable<void> {
     this._depositPolicy.next(policy);
-    return of(policy);
+    return of(void 0);
   }
 
-  updateAutoReminders(enabled: boolean) {
+  updateAutoReminders(enabled: boolean): Observable<void> {
     this._autoReminders.next(enabled);
-    return of(enabled);
+    return of(void 0);
   }
 
-  setReservationStatus(id: string, status: ReservationStatus) {
+  setReservationStatus(
+    id: string,
+    status: ReservationStatus
+  ): Observable<void> {
     return this.updateReservation(id, { status });
   }
 
   private createId(): string {
     const randomUUID = globalThis.crypto?.randomUUID?.();
-    if (randomUUID) {
-      return randomUUID;
-    }
+    if (randomUUID) return randomUUID;
     return `res_${Date.now()}_${Math.floor(Math.random() * 10_000)}`;
   }
 }

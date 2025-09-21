@@ -21,8 +21,10 @@ import {
   BehaviorSubject,
   combineLatest,
   map,
+  Observable,
   shareReplay,
   startWith,
+  forkJoin,
 } from 'rxjs';
 import {
   Reservation,
@@ -98,7 +100,7 @@ import {
     MatSnackBarModule,
   ],
   templateUrl: './reservations-page.component.html',
-  styleUrl: './reservations-page.component.scss',
+  styleUrls: ['./reservations-page.component.scss'],
 })
 export class ReservationsPageComponent {
   private readonly reservationService = inject(ReservationService);
@@ -124,7 +126,10 @@ export class ReservationsPageComponent {
     { label: '2 horas', value: 120 },
   ];
 
-  readonly statusFilters: { label: string; value: 'all' | ReservationStatus }[] = [
+  readonly statusFilters: {
+    label: string;
+    value: 'all' | ReservationStatus;
+  }[] = [
     { label: 'Todos', value: 'all' },
     { label: 'Pendientes', value: 'pendiente' },
     { label: 'Confirmadas', value: 'confirmada' },
@@ -162,7 +167,10 @@ export class ReservationsPageComponent {
   });
 
   readonly policyForm = this.fb.group({
-    depositPercentage: [30, [Validators.required, Validators.min(0), Validators.max(100)]],
+    depositPercentage: [
+      30,
+      [Validators.required, Validators.min(0), Validators.max(100)],
+    ],
     policyText: ['', [Validators.required, Validators.minLength(10)]],
     autoReminders: [true],
   });
@@ -175,15 +183,30 @@ export class ReservationsPageComponent {
     reason: [''],
   });
 
-  readonly reservas$ = this.reservationService.reservas$;
-  readonly courts$ = this.reservationService.courts$;
-  readonly depositPercentage$ = this.reservationService.depositPercentage$;
-  readonly depositPolicy$ = this.reservationService.depositPolicy$;
-  readonly autoReminders$ = this.reservationService.autoReminders$;
+  readonly reservas$: Observable<Reservation[]> = this.reservationService.reservas$;
+  readonly courts$: Observable<Court[]> = this.reservationService.courts$;
+  readonly depositPercentage$: Observable<number> = this.reservationService.depositPercentage$;
+  readonly depositPolicy$: Observable<string> = this.reservationService.depositPolicy$;
+  readonly autoReminders$: Observable<boolean> = this.reservationService.autoReminders$;
 
-  readonly playerColumns = ['date', 'court', 'time', 'status', 'deposit', 'actions'];
+  readonly playerColumns = [
+    'date',
+    'court',
+    'time',
+    'status',
+    'deposit',
+    'actions',
+  ];
   readonly historyColumns = ['date', 'court', 'time', 'status', 'deposit'];
-  readonly adminColumns = ['court', 'date', 'time', 'contact', 'deposit', 'status', 'actions'];
+  readonly adminColumns = [
+    'court',
+    'date',
+    'time',
+    'contact',
+    'deposit',
+    'status',
+    'actions',
+  ];
 
   readonly calendarLegend = [
     { label: 'Disponible', class: 'available' },
@@ -227,10 +250,11 @@ export class ReservationsPageComponent {
   readonly myUpcomingReservations$ = this.reservas$.pipe(
     map((reservations) =>
       reservations
-        .filter((reservation) =>
-          this.belongsToCurrentUser(reservation) &&
-          !this.isPastReservation(reservation) &&
-          reservation.status !== 'cancelada'
+        .filter(
+          (reservation) =>
+            this.belongsToCurrentUser(reservation) &&
+            !this.isPastReservation(reservation) &&
+            reservation.status !== 'cancelada'
         )
         .sort((a, b) => this.compareReservations(a, b))
     )
@@ -239,9 +263,11 @@ export class ReservationsPageComponent {
   readonly myHistoryReservations$ = this.reservas$.pipe(
     map((reservations) =>
       reservations
-        .filter((reservation) =>
-          this.belongsToCurrentUser(reservation) &&
-          (this.isPastReservation(reservation) || reservation.status === 'cancelada')
+        .filter(
+          (reservation) =>
+            this.belongsToCurrentUser(reservation) &&
+            (this.isPastReservation(reservation) ||
+              reservation.status === 'cancelada')
         )
         .sort((a, b) => this.compareReservations(b, a))
     )
@@ -252,7 +278,9 @@ export class ReservationsPageComponent {
     this.isAdmin$,
   ]).pipe(
     map(([reservations, isAdmin]) =>
-      isAdmin ? reservations : reservations.filter((r) => this.belongsToCurrentUser(r))
+      isAdmin
+        ? reservations
+        : reservations.filter((r) => this.belongsToCurrentUser(r))
     )
   );
 
@@ -273,7 +301,11 @@ export class ReservationsPageComponent {
     this.reservas$,
     this.courts$,
     this.selectedDate$,
-  ]).pipe(map(([reservations, courts, date]) => this.buildWeekOverview(reservations, courts, date)));
+  ]).pipe(
+    map(([reservations, courts, date]) =>
+      this.buildWeekOverview(reservations, courts, date)
+    )
+  );
 
   readonly dayAvailability$ = combineLatest([
     this.reservas$,
@@ -287,7 +319,13 @@ export class ReservationsPageComponent {
     ),
   ]).pipe(
     map(([reservations, courts, date, duration, courtId]) =>
-      this.buildDayAvailability(reservations, courts, date, duration ?? 60, courtId)
+      this.buildDayAvailability(
+        reservations,
+        courts,
+        date,
+        duration ?? 60,
+        courtId
+      )
     )
   );
 
@@ -308,9 +346,7 @@ export class ReservationsPageComponent {
     this.filterForm.controls.viewMode.valueChanges.pipe(
       startWith(this.filterForm.controls.viewMode.value)
     ),
-  ]).pipe(
-    map(([date, mode]) => this.getSelectedDateLabel(date, mode))
-  );
+  ]).pipe(map(([date, mode]) => this.getSelectedDateLabel(date, mode)));
 
   readonly selectedDateReservations$ = combineLatest([
     this.reservas$,
@@ -337,7 +373,10 @@ export class ReservationsPageComponent {
           .split('-')
           .map((value) => Number(value));
         if (resYear === year && resMonth === month) {
-          summary.set(reservation.date, (summary.get(reservation.date) ?? 0) + 1);
+          summary.set(
+            reservation.date,
+            (summary.get(reservation.date) ?? 0) + 1
+          );
         }
       });
       return Array.from(summary.entries())
@@ -360,12 +399,15 @@ export class ReservationsPageComponent {
     }
     const dateKey = this.toISODate(cellDate);
     const reservations = this.reservationsSnapshot.filter(
-      (reservation) => reservation.date === dateKey && reservation.status !== 'cancelada'
+      (reservation) =>
+        reservation.date === dateKey && reservation.status !== 'cancelada'
     );
     if (!reservations.length) {
       return '';
     }
-    if (reservations.some((reservation) => reservation.status === 'bloqueada')) {
+    if (
+      reservations.some((reservation) => reservation.status === 'bloqueada')
+    ) {
       return 'blocked';
     }
     if (reservations.some((reservation) => reservation.depositPaid)) {
@@ -391,7 +433,11 @@ export class ReservationsPageComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((reservations) => (this.reservationsSnapshot = reservations));
 
-    combineLatest([this.depositPolicy$, this.depositPercentage$, this.autoReminders$])
+    combineLatest([
+      this.depositPolicy$,
+      this.depositPercentage$,
+      this.autoReminders$,
+    ])
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(([policy, percentage, autoReminders]) => {
         this.policyForm.patchValue(
@@ -419,13 +465,19 @@ export class ReservationsPageComponent {
     const newDate = new Date(currentDate);
     switch (mode) {
       case 'day':
-        newDate.setDate(currentDate.getDate() + (direction === 'next' ? 1 : -1));
+        newDate.setDate(
+          currentDate.getDate() + (direction === 'next' ? 1 : -1)
+        );
         break;
       case 'week':
-        newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
+        newDate.setDate(
+          currentDate.getDate() + (direction === 'next' ? 7 : -7)
+        );
         break;
       case 'month':
-        newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1));
+        newDate.setMonth(
+          currentDate.getMonth() + (direction === 'next' ? 1 : -1)
+        );
         break;
     }
     this.onDateSelected(newDate);
@@ -437,7 +489,10 @@ export class ReservationsPageComponent {
     }
     const normalized = this.getStartOfDay(date);
     this.selectedDateSubject.next(normalized);
-    this.filterForm.controls.range.patchValue({ start: normalized, end: normalized });
+    this.filterForm.controls.range.patchValue({
+      start: normalized,
+      end: normalized,
+    });
     this.reservationForm.controls.date.setValue(normalized);
     this.blockForm.controls.date.setValue(normalized);
   }
@@ -446,7 +501,9 @@ export class ReservationsPageComponent {
     if (slot.status !== 'available') {
       if (slot.reservation) {
         this.snackBar.open(
-          `Turno ocupado: ${slot.reservation.contactName} - ${this.statusLabels[slot.reservation.status]}`,
+          `Turno ocupado: ${slot.reservation.contactName} - ${
+            this.statusLabels[slot.reservation.status]
+          }`,
           'Cerrar',
           { duration: 3500 }
         );
@@ -475,9 +532,11 @@ export class ReservationsPageComponent {
     const value = this.reservationForm.getRawValue();
     const court = this.reservationService.getCourtById(value.courtId ?? '');
     if (!court || !value.date || !value.startTime) {
-      this.snackBar.open('Por favor seleccioná una cancha, fecha y horario válidos.', 'Cerrar', {
-        duration: 4000,
-      });
+      this.snackBar.open(
+        'Por favor seleccioná una cancha, fecha y horario válidos.',
+        'Cerrar',
+        { duration: 4000 }
+      );
       return;
     }
 
@@ -490,7 +549,10 @@ export class ReservationsPageComponent {
           .filter(Boolean)
       : [];
 
-    const totalPrice = this.reservationService.calculatePrice(court.id, duration);
+    const totalPrice = this.reservationService.calculatePrice(
+      court.id,
+      duration
+    );
     const deposit = this.reservationService.calculateDeposit(totalPrice);
 
     const reservation: Reservation = {
@@ -513,17 +575,14 @@ export class ReservationsPageComponent {
       createdAt: new Date().toISOString(),
     };
 
-    this.reservationService
-      .addReservation(reservation)
-      .subscribe(() => {
-        this.snackBar.open('Reserva creada. Recordá completar el pago restante.', 'OK', {
-          duration: 3500,
-        });
-        this.reservationForm.patchValue({
-          players: '',
-          notes: '',
-        });
-      });
+    this.reservationService.addReservation(reservation).subscribe(() => {
+      this.snackBar.open(
+        'Reserva creada. Recordá completar el pago restante.',
+        'OK',
+        { duration: 3500 }
+      );
+      this.reservationForm.patchValue({ players: '', notes: '' });
+    });
   }
 
   cancel(reservation: Reservation) {
@@ -531,9 +590,8 @@ export class ReservationsPageComponent {
       reservation.status === 'bloqueada'
         ? '¿Quitar el bloqueo de la cancha para este turno?'
         : '¿Cancelar la reserva seleccionada? Se aplicarán las políticas de cancelación.';
-    if (!confirm(message)) {
-      return;
-    }
+    if (!confirm(message)) return;
+
     if (reservation.status === 'bloqueada') {
       this.reservationService.remove(reservation.id).subscribe(() => {
         this.snackBar.open('Bloqueo eliminado', 'Cerrar', { duration: 3000 });
@@ -577,12 +635,15 @@ export class ReservationsPageComponent {
       this.policyForm.markAllAsTouched();
       return;
     }
-    const { depositPercentage, policyText } = this.policyForm.getRawValue();
+    const { depositPercentage, policyText, autoReminders } =
+      this.policyForm.getRawValue();
     const percentage = Math.max(0, Math.min(100, depositPercentage ?? 0));
-    combineLatest([
+
+    // Para updates “fire-and-forget” en paralelo, usar forkJoin y que el service devuelva Observable<void>
+    forkJoin([
       this.reservationService.updateDepositPercentage(percentage / 100),
       this.reservationService.updateDepositPolicy(policyText ?? ''),
-      this.reservationService.updateAutoReminders(Boolean(this.policyForm.value.autoReminders)),
+      this.reservationService.updateAutoReminders(Boolean(autoReminders)),
     ]).subscribe(() => {
       this.snackBar.open('Políticas de seña actualizadas.', 'Cerrar', {
         duration: 3000,
@@ -597,11 +658,11 @@ export class ReservationsPageComponent {
     }
     const value = this.blockForm.getRawValue();
     const court = this.reservationService.getCourtById(value.courtId ?? '');
-    if (!court || !value.date || !value.startTime) {
-      return;
-    }
+    if (!court || !value.date || !value.startTime) return;
+
     const duration = value.duration ?? 60;
     const endTime = this.addMinutesToTime(value.startTime, duration);
+
     this.reservationService
       .blockSlot({
         courtId: court.id,
@@ -619,19 +680,13 @@ export class ReservationsPageComponent {
   }
 
   getDepositBadge(reservation: Reservation): 'pagada' | 'pendiente' {
-    if (reservation.status === 'bloqueada') {
-      return 'pagada';
-    }
+    if (reservation.status === 'bloqueada') return 'pagada';
     return reservation.depositPaid ? 'pagada' : 'pendiente';
   }
 
   statusClass(reservation: Reservation): string {
-    if (reservation.status === 'bloqueada') {
-      return 'blocked';
-    }
-    if (reservation.status === 'cancelada') {
-      return 'cancelled';
-    }
+    if (reservation.status === 'bloqueada') return 'blocked';
+    if (reservation.status === 'cancelada') return 'cancelled';
     return reservation.depositPaid ? 'deposit' : 'reserved';
   }
 
@@ -678,9 +733,17 @@ export class ReservationsPageComponent {
     courtId: string
   ): CourtAvailability[] {
     const dateKey = this.toISODate(date);
-    const filteredCourts = courtId === 'all' ? courts : courts.filter((court) => court.id === courtId);
+    const filteredCourts =
+      courtId === 'all'
+        ? courts
+        : courts.filter((court) => court.id === courtId);
     return filteredCourts.map((court) => {
-      const slots = this.generateSlotsForCourt(reservations, court, dateKey, duration);
+      const slots = this.generateSlotsForCourt(
+        reservations,
+        court,
+        dateKey,
+        duration
+      );
       return { court, slots };
     });
   }
@@ -711,7 +774,10 @@ export class ReservationsPageComponent {
     return reservations
       .filter((reservation) => reservation.status !== 'cancelada')
       .map((reservation) => {
-        const reservationDate = this.combineDateAndTime(reservation.date, reservation.startTime);
+        const reservationDate = this.combineDateAndTime(
+          reservation.date,
+          reservation.startTime
+        );
         const diff = reservationDate.getTime() - now.getTime();
         const days = Math.ceil(diff / (24 * 60 * 60 * 1000));
         return { reservation, daysToGo: days };
@@ -735,21 +801,24 @@ export class ReservationsPageComponent {
         if (role === 'player' && !this.belongsToCurrentUser(reservation)) {
           return false;
         }
-        if (filters.courtId !== 'all' && reservation.courtId !== filters.courtId) {
+        if (
+          filters.courtId !== 'all' &&
+          reservation.courtId !== filters.courtId
+        ) {
           return false;
         }
         if (filters.status !== 'all' && reservation.status !== filters.status) {
           return false;
         }
-        if (filters.duration && reservation.durationMinutes !== filters.duration) {
+        if (
+          filters.duration &&
+          reservation.durationMinutes !== filters.duration
+        ) {
           return false;
         }
-        if (start && reservation.date < start) {
-          return false;
-        }
-        if (end && reservation.date > end) {
-          return false;
-        }
+        if (start && reservation.date < start) return false;
+        if (end && reservation.date > end) return false;
+
         if (search) {
           const haystack = [
             reservation.contactName,
@@ -769,14 +838,20 @@ export class ReservationsPageComponent {
 
   private belongsToCurrentUser(reservation: Reservation): boolean {
     return (
-      reservation.contactEmail.toLowerCase() === this.currentUser.email.toLowerCase() ||
-      reservation.players.some((player) => this.normalize(player) === this.normalize(this.currentUser.name))
+      reservation.contactEmail.toLowerCase() ===
+        this.currentUser.email.toLowerCase() ||
+      reservation.players.some(
+        (player) =>
+          this.normalize(player) === this.normalize(this.currentUser.name)
+      )
     );
   }
 
   private findConflicts(reservations: Reservation[]): ConflictWarning[] {
     const warnings: ConflictWarning[] = [];
-    const active = reservations.filter((reservation) => reservation.status !== 'cancelada');
+    const active = reservations.filter(
+      (reservation) => reservation.status !== 'cancelada'
+    );
     const sorted = active.sort((a, b) => this.compareReservations(a, b));
     for (let i = 0; i < sorted.length; i++) {
       for (let j = i + 1; j < sorted.length; j++) {
@@ -785,7 +860,14 @@ export class ReservationsPageComponent {
         if (first.courtId !== second.courtId || first.date !== second.date) {
           continue;
         }
-        if (this.isTimeOverlap(first.startTime, first.endTime, second.startTime, second.endTime)) {
+        if (
+          this.isTimeOverlap(
+            first.startTime,
+            first.endTime,
+            second.startTime,
+            second.endTime
+          )
+        ) {
           warnings.push({
             courtName: first.courtName,
             date: first.date,
@@ -859,7 +941,9 @@ export class ReservationsPageComponent {
   private minutesToTime(minutes: number): string {
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${rest.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, '0')}:${rest
+      .toString()
+      .padStart(2, '0')}`;
   }
 
   private addMinutesToTime(time: string, minutesToAdd: number): string {
@@ -953,9 +1037,7 @@ export class ReservationsPageComponent {
 
   private generateId(): string {
     const randomUUID = globalThis.crypto?.randomUUID?.();
-    if (randomUUID) {
-      return randomUUID;
-    }
+    if (randomUUID) return randomUUID;
     return `res_${Date.now()}_${Math.floor(Math.random() * 10_000)}`;
   }
 }
