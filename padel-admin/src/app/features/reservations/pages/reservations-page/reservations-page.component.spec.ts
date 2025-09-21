@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 import { ReservationsPageComponent } from './reservations-page.component';
 
@@ -8,9 +9,8 @@ describe('ReservationsPageComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ReservationsPageComponent]
-    })
-    .compileComponents();
+      imports: [ReservationsPageComponent, NoopAnimationsModule],
+    }).compileComponents();
     
     fixture = TestBed.createComponent(ReservationsPageComponent);
     component = fixture.componentInstance;

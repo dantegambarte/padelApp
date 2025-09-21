@@ -1,48 +1,724 @@
-<h2 class="mb-3">Reservas</h2>
+<div class="reservations-page">
+  <header class="page-header">
+    <div class="page-header__titles">
+      <h1>Reservas de canchas</h1>
+      <p class="subtitle">
+        Organizá tus turnos, pagá la seña y gestioná la disponibilidad en un único lugar.
+      </p>
+      <div class="selected-date" *ngIf="selectedDateLabel$ | async as selectedLabel">
+        <mat-icon>event</mat-icon>
+        <span>{{ selectedLabel }}</span>
+      </div>
+    </div>
+    <mat-button-toggle-group
+      class="role-toggle"
+      [value]="roleControl.value"
+      (change)="onChangeRole($event.value)"
+      aria-label="Seleccionar modo de visualización"
+    >
+      <mat-button-toggle value="player">Modo jugador</mat-button-toggle>
+      <mat-button-toggle value="admin">Modo administrador</mat-button-toggle>
+    </mat-button-toggle-group>
+  </header>
 
-<ng-container *ngIf="reservas$ | async as reservas">
-  <table mat-table [dataSource]="reservas" class="mat-elevation-z2">
+  <section class="filters" [formGroup]="filterForm">
+    <div class="filters__row">
+      <mat-button-toggle-group
+        class="view-toggle"
+        formControlName="viewMode"
+        aria-label="Cambiar la vista del calendario"
+      >
+        <mat-button-toggle *ngFor="let mode of viewModes" [value]="mode.value">
+          {{ mode.label }}
+        </mat-button-toggle>
+      </mat-button-toggle-group>
 
-    <ng-container matColumnDef="court">
-      <th mat-header-cell *matHeaderCellDef> Cancha </th>
-      <td mat-cell *matCellDef="let r"> {{ r.courtName }} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="date">
-      <th mat-header-cell *matHeaderCellDef> Fecha </th>
-      <td mat-cell *matCellDef="let r"> {{ r.date | date:'dd/MM/yyyy' }} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="time">
-      <th mat-header-cell *matHeaderCellDef> Horario </th>
-      <td mat-cell *matCellDef="let r"> {{ r.startTime }} - {{ r.endTime }} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="players">
-      <th mat-header-cell *matHeaderCellDef> Jugadores </th>
-      <td mat-cell *matCellDef="let r"> {{ r.players.join(', ') }} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="deposit">
-      <th mat-header-cell *matHeaderCellDef> Seña </th>
-      <td mat-cell *matCellDef="let r"> {{ r.deposit | currency:'ARS':'symbol' }} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="status">
-      <th mat-header-cell *matHeaderCellDef> Estado </th>
-      <td mat-cell *matCellDef="let r"> {{ r.status }} </td>
-    </ng-container>
-
-    <ng-container matColumnDef="actions">
-      <th mat-header-cell *matHeaderCellDef> Acciones </th>
-      <td mat-cell *matCellDef="let r">
-        <button mat-icon-button (click)="cancel(r)">
-          <mat-icon>delete</mat-icon>
+      <div class="navigation-buttons">
+        <button
+          mat-icon-button
+          type="button"
+          (click)="navigate('prev')"
+          matTooltip="Ver periodo anterior"
+        >
+          <mat-icon>chevron_left</mat-icon>
         </button>
-      </td>
-    </ng-container>
+        <button mat-stroked-button type="button" (click)="onDateSelected(today)">
+          Hoy
+        </button>
+        <button
+          mat-icon-button
+          type="button"
+          (click)="navigate('next')"
+          matTooltip="Ver periodo siguiente"
+        >
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </div>
 
-    <tr mat-header-row *matHeaderRowDef="cols"></tr>
-    <tr mat-row *matRowDef="let row; columns: cols;"></tr>
-  </table>
-</ng-container>
+    <div class="filters__row">
+      <mat-form-field appearance="outline">
+        <mat-label>Cancha</mat-label>
+        <mat-select formControlName="courtId">
+          <mat-option value="all">Todas las canchas</mat-option>
+          <mat-option *ngFor="let court of courts$ | async" [value]="court.id">
+            {{ court.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Duración del turno</mat-label>
+        <mat-select formControlName="duration">
+          <mat-option [value]="null">Cualquier duración</mat-option>
+          <mat-option *ngFor="let option of durationOptions" [value]="option.value">
+            {{ option.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select formControlName="status">
+          <mat-option *ngFor="let status of statusFilters" [value]="status.value">
+            {{ status.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <div class="date-range" formGroupName="range">
+        <mat-form-field appearance="outline">
+          <mat-label>Rango de fechas</mat-label>
+          <mat-date-range-input [rangePicker]="picker">
+            <input matStartDate formControlName="start" placeholder="Desde" />
+            <input matEndDate formControlName="end" placeholder="Hasta" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-date-range-picker #picker></mat-date-range-picker>
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" *ngIf="isAdmin$ | async">
+        <mat-label>Buscar reservas</mat-label>
+        <input matInput formControlName="search" placeholder="Nombre, email o cancha" />
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <div class="policy-banner" *ngIf="depositPolicy$ | async as policy">
+      <mat-icon color="primary">info</mat-icon>
+      <span>{{ policy }}</span>
+    </div>
+  </section>
+
+  <mat-tab-group class="page-tabs">
+    <mat-tab label="Calendario">
+      <section class="calendar-section" *ngIf="(selectedDate$ | async) as selectedDate">
+        <mat-card class="calendar-section__calendar mat-elevation-z4">
+          <header class="card-header">
+            <div>
+              <h3>Calendario interactivo</h3>
+              <p>Colores en tiempo real para turnos disponibles, reservados y con seña pagada.</p>
+            </div>
+          </header>
+          <mat-calendar
+            [selected]="selectedDate"
+            (selectedChange)="onDateSelected($event)"
+            [dateClass]="calendarDateClass"
+          ></mat-calendar>
+          <div class="calendar-legend">
+            <div *ngFor="let item of calendarLegend" class="legend-item">
+              <span class="legend-dot" [ngClass]="item.class"></span>
+              <span>{{ item.label }}</span>
+            </div>
+          </div>
+
+          <section class="selected-day" *ngIf="selectedDateReservations$ | async as dayReservations">
+            <h4>Reservas para {{ selectedDate | date: 'EEEE d/M' }}</h4>
+            <p *ngIf="!dayReservations.length" class="empty-state">
+              No hay reservas registradas para este día. Seleccioná un horario disponible para comenzar.
+            </p>
+            <mat-list *ngIf="dayReservations.length">
+              <mat-list-item *ngFor="let reservation of dayReservations" [ngClass]="statusClass(reservation)">
+                <div matListItemIcon class="status-icon">
+                  <mat-icon *ngIf="reservation.status === 'bloqueada'">block</mat-icon>
+                  <mat-icon *ngIf="reservation.status === 'cancelada'">cancel</mat-icon>
+                  <mat-icon *ngIf="reservation.depositPaid && reservation.status !== 'bloqueada'">verified</mat-icon>
+                  <mat-icon *ngIf="!reservation.depositPaid && reservation.status !== 'bloqueada'">event_busy</mat-icon>
+                </div>
+                <div matListItemTitle>
+                  {{ reservation.startTime }} - {{ reservation.endTime }} · {{ reservation.courtName }}
+                </div>
+                <div matListItemLine>
+                  {{ reservation.contactName }} ·
+                  <strong>
+                    {{ getStatusLabel(reservation.status) }}
+                  </strong>
+                </div>
+                <div matListItemMeta>
+                  <span class="deposit-chip" [ngClass]="getDepositBadge(reservation)">
+                    Seña {{ getDepositBadge(reservation) === 'pagada' ? 'pagada' : 'pendiente' }}
+                  </span>
+                </div>
+              </mat-list-item>
+            </mat-list>
+          </section>
+        </mat-card>
+
+        <section class="calendar-section__details" [ngSwitch]="filterForm.controls.viewMode.value">
+          <ng-container *ngSwitchCase="'week'">
+            <mat-card class="mat-elevation-z2">
+              <header class="card-header">
+                <div>
+                  <h3>Vista semanal</h3>
+                  <p>Control total de las reservas y bloqueos para los próximos siete días.</p>
+                </div>
+              </header>
+              <div class="week-grid" *ngIf="weekOverview$ | async as overview">
+                <mat-card class="week-card" *ngFor="let day of overview">
+                  <h4>{{ day.label }}</h4>
+                  <div class="week-card__content" *ngIf="day.reservations.length; else emptyDay">
+                    <article
+                      class="week-card__reservation"
+                      *ngFor="let reservation of day.reservations"
+                      [ngClass]="statusClass(reservation)"
+                    >
+                      <header>
+                        <span class="time">{{ reservation.startTime }} - {{ reservation.endTime }}</span>
+                        <span class="court">{{ reservation.courtName }}</span>
+                      </header>
+                      <p>{{ reservation.contactName }}</p>
+                      <footer>
+                        <span class="deposit-chip" [ngClass]="getDepositBadge(reservation)">
+                          {{ reservation.deposit | currency: 'ARS':'symbol':'1.0-0' }} ·
+                          Seña {{ reservation.depositPaid ? 'pagada' : 'pendiente' }}
+                        </span>
+                      </footer>
+                    </article>
+                  </div>
+                  <ng-template #emptyDay>
+                    <p class="empty-state">Sin reservas aún.</p>
+                  </ng-template>
+                </mat-card>
+              </div>
+            </mat-card>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'day'">
+            <mat-card class="mat-elevation-z2 day-view">
+              <header class="card-header">
+                <div>
+                  <h3>Disponibilidad por cancha</h3>
+                  <p>Elegí un horario libre para completar la reserva en segundos.</p>
+                </div>
+              </header>
+              <ng-container *ngIf="dayAvailability$ | async as availability">
+                <mat-accordion multi>
+                  <mat-expansion-panel *ngFor="let courtAvailability of availability" [expanded]="true">
+                    <mat-expansion-panel-header>
+                      <mat-panel-title>
+                        {{ courtAvailability.court.name }}
+                      </mat-panel-title>
+                      <mat-panel-description>
+                        {{ courtAvailability.court.description }} · ${{ courtAvailability.court.pricePerHour | number: '1.0-0' }}/hora
+                      </mat-panel-description>
+                    </mat-expansion-panel-header>
+                    <div class="slot-list">
+                      <mat-chip-set aria-label="Turnos disponibles">
+                        <mat-chip
+                          *ngFor="let slot of courtAvailability.slots"
+                          [ngClass]="slot.status"
+                          [disabled]="slot.status !== 'available'"
+                          (click)="selectSlot(slot, courtAvailability.court, selectedDate)"
+                          [matTooltip]="slot.status === 'available' ? 'Reservar este horario' : (slot.reservation?.contactName || 'Ocupado')"
+                        >
+                          <mat-icon *ngIf="slot.status === 'available'">check_circle</mat-icon>
+                          <mat-icon *ngIf="slot.status === 'reserved'">event_busy</mat-icon>
+                          <mat-icon *ngIf="slot.status === 'deposit'">verified</mat-icon>
+                          <mat-icon *ngIf="slot.status === 'blocked'">block</mat-icon>
+                          <span>{{ slot.startTime }} - {{ slot.endTime }}</span>
+                        </mat-chip>
+                      </mat-chip-set>
+                    </div>
+                  </mat-expansion-panel>
+                </mat-accordion>
+              </ng-container>
+            </mat-card>
+          </ng-container>
+
+          <ng-container *ngSwitchDefault>
+            <mat-card class="mat-elevation-z2">
+              <header class="card-header">
+                <div>
+                  <h3>Resumen mensual</h3>
+                  <p>Visualizá rápidamente qué días tienen más movimiento y planificá tu agenda.</p>
+                </div>
+              </header>
+              <ng-container *ngIf="monthSummary$ | async as summary">
+                <p *ngIf="!summary.length" class="empty-state">
+                  Aún no hay reservas en este mes. Promocioná horarios libres para incrementar la ocupación.
+                </p>
+                <div class="month-summary" *ngIf="summary.length">
+                  <div class="month-summary__item" *ngFor="let day of summary">
+                    <span class="day">{{ day.date | date: 'd/M' }}</span>
+                    <span class="count">
+                      {{ day.count }} turno{{ day.count === 1 ? '' : 's' }}
+                    </span>
+                  </div>
+                </div>
+              </ng-container>
+            </mat-card>
+          </ng-container>
+        </section>
+      </section>
+
+      <section class="alerts" aria-label="Avisos y notificaciones">
+        <mat-card class="mat-elevation-z2" *ngIf="conflictWarnings$ | async as warnings">
+          <header class="card-header">
+            <div>
+              <h3>Alertas de conflictos</h3>
+              <p>Turnos superpuestos o bloqueados que requieren atención.</p>
+            </div>
+          </header>
+          <div *ngIf="warnings.length; else noConflicts">
+            <mat-list>
+              <mat-list-item *ngFor="let warning of warnings">
+                <mat-icon matListItemIcon color="warn">warning</mat-icon>
+                <div matListItemTitle>
+                  {{ warning.courtName }} · {{ warning.date | date: 'dd/MM/yyyy' }}
+                </div>
+                <div matListItemLine>
+                  {{ warning.reservations[0].startTime }} / {{ warning.reservations[1].startTime }} · Revisar disponibilidad
+                </div>
+              </mat-list-item>
+            </mat-list>
+          </div>
+          <ng-template #noConflicts>
+            <p class="empty-state">No se detectaron conflictos de agenda.</p>
+          </ng-template>
+        </mat-card>
+
+        <mat-card class="mat-elevation-z2" *ngIf="reminders$ | async as reminders">
+          <header class="card-header">
+            <div>
+              <h3>Recordatorios automáticos</h3>
+              <ng-container *ngIf="autoReminders$ | async; else remindersDisabled">
+                <p>Notificaremos a los jugadores antes del turno para completar el pago restante.</p>
+              </ng-container>
+            </div>
+          </header>
+          <div *ngIf="reminders.length; else noReminders">
+            <mat-list>
+              <mat-list-item *ngFor="let reminder of reminders">
+                <mat-icon matListItemIcon color="primary">notifications_active</mat-icon>
+                <div matListItemTitle>
+                  {{ reminder.reservation.contactName }} · {{ reminder.reservation.courtName }}
+                </div>
+                <div matListItemLine>
+                  Turno en {{ reminder.daysToGo }} día{{ reminder.daysToGo === 1 ? '' : 's' }} · {{ reminder.reservation.startTime }}
+                </div>
+              </mat-list-item>
+            </mat-list>
+          </div>
+          <ng-template #noReminders>
+            <p class="empty-state">Sin recordatorios pendientes por el momento.</p>
+          </ng-template>
+          <ng-template #remindersDisabled>
+            <p>Los recordatorios automáticos están desactivados. Activalos desde el panel de administración.</p>
+          </ng-template>
+        </mat-card>
+      </section>
+    </mat-tab>
+
+    <mat-tab label="Nueva reserva">
+      <section class="reservation-form" [formGroup]="reservationForm">
+        <mat-card class="mat-elevation-z2">
+          <header class="card-header">
+            <div>
+              <h3>Reservar un turno</h3>
+              <p>Completá los datos de contacto y confirmá la seña para asegurar tu lugar.</p>
+            </div>
+          </header>
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Cancha</mat-label>
+              <mat-select formControlName="courtId" required>
+                <mat-option *ngFor="let court of courts$ | async" [value]="court.id">
+                  {{ court.name }} · ${{ court.pricePerHour | number: '1.0-0' }}/h
+                </mat-option>
+              </mat-select>
+              <mat-error>Seleccioná una cancha</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha</mat-label>
+              <input matInput [matDatepicker]="reservationDate" formControlName="date" />
+              <mat-datepicker-toggle matSuffix [for]="reservationDate"></mat-datepicker-toggle>
+              <mat-datepicker #reservationDate></mat-datepicker>
+              <mat-error>Elegí la fecha del turno</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Hora de inicio</mat-label>
+              <mat-select formControlName="startTime" required>
+                <mat-option *ngFor="let time of timeOptions" [value]="time">{{ time }}</mat-option>
+              </mat-select>
+              <mat-error>Indicá el horario de inicio</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Duración</mat-label>
+              <mat-select formControlName="duration" required>
+                <mat-option *ngFor="let option of durationOptions" [value]="option.value">
+                  {{ option.label }}
+                </mat-option>
+              </mat-select>
+              <mat-error>Seleccioná la duración del turno</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Nombre del responsable</mat-label>
+              <input matInput formControlName="contactName" placeholder="Nombre y apellido" />
+              <mat-error>Ingresá un nombre de contacto</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Email de contacto</mat-label>
+              <input matInput formControlName="contactEmail" placeholder="nombre@correo.com" />
+              <mat-error>Ingresá un email válido</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Jugadores</mat-label>
+              <textarea
+                matInput
+                formControlName="players"
+                placeholder="Ej: Ana, Bruno, Carla, Diego"
+                rows="3"
+              ></textarea>
+              <mat-error>Indicanos quiénes juegan</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="notes">
+              <mat-label>Notas adicionales</mat-label>
+              <textarea matInput formControlName="notes" placeholder="Traigo invitados..." rows="3"></textarea>
+            </mat-form-field>
+
+            <mat-slide-toggle formControlName="payDeposit" color="primary">
+              Pagar seña ahora ({{ (depositPercentage$ | async)! * 100 | number: '1.0-0' }}%)
+            </mat-slide-toggle>
+          </div>
+
+          <section class="summary" *ngIf="reservationSummary$ | async as summary">
+            <mat-card class="summary-card mat-elevation-z1" [ngClass]="summary.isValid ? 'ready' : 'pending'">
+              <h4>Resumen de pago</h4>
+              <p *ngIf="!summary.isValid" class="empty-state">
+                Completá la cancha, horario y jugadores para calcular el monto de la seña.
+              </p>
+              <div *ngIf="summary.isValid" class="summary-grid">
+                <div>
+                  <span class="label">Cancha</span>
+                  <strong>{{ summary.courtName }}</strong>
+                </div>
+                <div>
+                  <span class="label">Horario</span>
+                  <strong>{{ reservationForm.value.startTime }} - {{ summary.endTime }}</strong>
+                </div>
+                <div>
+                  <span class="label">Monto total</span>
+                  <strong>{{ summary.total | currency: 'ARS':'symbol':'1.0-0' }}</strong>
+                </div>
+                <div>
+                  <span class="label">Seña ({{ summary.depositPercentage * 100 | number: '1.0-0' }}%)</span>
+                  <strong>{{ summary.deposit | currency: 'ARS':'symbol':'1.0-0' }}</strong>
+                </div>
+              </div>
+              <p *ngIf="summary.players.length" class="players">
+                Participantes: {{ summary.players.join(', ') }}
+              </p>
+            </mat-card>
+          </section>
+
+          <div class="form-actions">
+            <button
+              mat-flat-button
+              color="primary"
+              type="button"
+              (click)="reservationForm.controls.payDeposit.setValue(true); submitReservation()"
+            >
+              Reservar y pagar seña
+            </button>
+            <button
+              mat-stroked-button
+              color="accent"
+              type="button"
+              (click)="reservationForm.controls.payDeposit.setValue(false); submitReservation()"
+            >
+              Reservar sin pagar ahora
+            </button>
+          </div>
+        </mat-card>
+      </section>
+    </mat-tab>
+
+    <mat-tab label="Mis reservas">
+      <section class="my-reservations">
+        <mat-card class="mat-elevation-z2" *ngIf="myUpcomingReservations$ | async as upcoming">
+          <header class="card-header">
+            <div>
+              <h3 [matBadge]="upcoming.length" matBadgeColor="primary">Próximos turnos</h3>
+              <p>Gestioná cancelaciones, pagos de seña y recordatorios.</p>
+            </div>
+          </header>
+          <p *ngIf="!upcoming.length" class="empty-state">
+            No tenés reservas futuras. Elegí un horario disponible desde el calendario.
+          </p>
+          <table mat-table *ngIf="upcoming.length" [dataSource]="upcoming" [trackBy]="trackById" class="mat-elevation-z1">
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let reservation">
+                {{ reservation.date | date: 'dd/MM/yyyy' }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="court">
+              <th mat-header-cell *matHeaderCellDef>Cancha</th>
+              <td mat-cell *matCellDef="let reservation">{{ reservation.courtName }}</td>
+            </ng-container>
+            <ng-container matColumnDef="time">
+              <th mat-header-cell *matHeaderCellDef>Horario</th>
+              <td mat-cell *matCellDef="let reservation">
+                {{ reservation.startTime }} - {{ reservation.endTime }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let reservation">
+                <span class="status-chip" [ngClass]="statusClass(reservation)">
+                  {{ getStatusLabel(reservation.status) }}
+                </span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="deposit">
+              <th mat-header-cell *matHeaderCellDef>Seña</th>
+              <td mat-cell *matCellDef="let reservation">
+                <span class="deposit-chip" [ngClass]="getDepositBadge(reservation)">
+                  {{ reservation.deposit | currency: 'ARS':'symbol':'1.0-0' }}
+                </span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let reservation">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  type="button"
+                  (click)="toggleReminder(reservation)"
+                  [matTooltip]="reservation.remindersSent ? 'Desactivar recordatorio' : 'Enviar recordatorio'"
+                >
+                  <mat-icon>{{ reservation.remindersSent ? 'notifications_off' : 'notifications_active' }}</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" type="button" (click)="cancel(reservation)" matTooltip="Cancelar turno">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="playerColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: playerColumns"></tr>
+          </table>
+        </mat-card>
+
+        <mat-card class="mat-elevation-z2" *ngIf="myHistoryReservations$ | async as history">
+          <header class="card-header">
+            <div>
+              <h3>Historial</h3>
+              <p>Consultá reservas pasadas, canceladas o completadas.</p>
+            </div>
+          </header>
+          <p *ngIf="!history.length" class="empty-state">Todavía no hay historial para mostrar.</p>
+          <table mat-table *ngIf="history.length" [dataSource]="history" [trackBy]="trackById" class="mat-elevation-z1">
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let reservation">{{ reservation.date | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="court">
+              <th mat-header-cell *matHeaderCellDef>Cancha</th>
+              <td mat-cell *matCellDef="let reservation">{{ reservation.courtName }}</td>
+            </ng-container>
+            <ng-container matColumnDef="time">
+              <th mat-header-cell *matHeaderCellDef>Horario</th>
+              <td mat-cell *matCellDef="let reservation">
+                {{ reservation.startTime }} - {{ reservation.endTime }}
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let reservation">
+                <span class="status-chip" [ngClass]="statusClass(reservation)">
+                  {{ getStatusLabel(reservation.status) }}
+                </span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="deposit">
+              <th mat-header-cell *matHeaderCellDef>Seña</th>
+              <td mat-cell *matCellDef="let reservation">
+                {{ reservation.deposit | currency: 'ARS':'symbol':'1.0-0' }}
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="historyColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: historyColumns"></tr>
+          </table>
+        </mat-card>
+      </section>
+    </mat-tab>
+
+    <mat-tab *ngIf="isAdmin$ | async" label="Administración">
+      <section class="admin-panel">
+        <mat-card class="mat-elevation-z2">
+          <header class="card-header">
+            <div>
+              <h3>Políticas y recordatorios</h3>
+              <p>Actualizá la seña, el mensaje visible para los usuarios y la automatización de avisos.</p>
+            </div>
+          </header>
+          <form class="admin-form" [formGroup]="policyForm">
+            <mat-form-field appearance="outline">
+              <mat-label>Porcentaje de seña</mat-label>
+              <input matInput type="number" formControlName="depositPercentage" min="0" max="100" />
+              <span matSuffix>%</span>
+              <mat-error>Ingresá un valor entre 0 y 100</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Mensaje visible para jugadores</mat-label>
+              <textarea matInput formControlName="policyText" rows="3"></textarea>
+              <mat-error>El mensaje debe tener al menos 10 caracteres</mat-error>
+            </mat-form-field>
+            <mat-slide-toggle formControlName="autoReminders" color="primary">
+              Enviar recordatorios automáticos 24 h antes del turno
+            </mat-slide-toggle>
+            <button mat-flat-button color="primary" type="button" (click)="updatePolicies()">
+              Guardar cambios
+            </button>
+          </form>
+        </mat-card>
+
+        <mat-card class="mat-elevation-z2">
+          <header class="card-header">
+            <div>
+              <h3>Bloquear turnos</h3>
+              <p>Reservá espacios para mantenimiento, torneos o eventos especiales.</p>
+            </div>
+          </header>
+          <form class="admin-form" [formGroup]="blockForm">
+            <mat-form-field appearance="outline">
+              <mat-label>Cancha</mat-label>
+              <mat-select formControlName="courtId">
+                <mat-option *ngFor="let court of courts$ | async" [value]="court.id">
+                  {{ court.name }}
+                </mat-option>
+              </mat-select>
+              <mat-error>Seleccioná una cancha</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha</mat-label>
+              <input matInput [matDatepicker]="blockDate" formControlName="date" />
+              <mat-datepicker-toggle matSuffix [for]="blockDate"></mat-datepicker-toggle>
+              <mat-datepicker #blockDate></mat-datepicker>
+              <mat-error>Elegí una fecha</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Hora de inicio</mat-label>
+              <mat-select formControlName="startTime">
+                <mat-option *ngFor="let time of timeOptions" [value]="time">{{ time }}</mat-option>
+              </mat-select>
+              <mat-error>Indicá el horario</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Duración</mat-label>
+              <mat-select formControlName="duration">
+                <mat-option *ngFor="let option of durationOptions" [value]="option.value">{{ option.label }}</mat-option>
+              </mat-select>
+              <mat-error>Definí la duración</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Motivo</mat-label>
+              <textarea matInput formControlName="reason" rows="2" placeholder="Mantenimiento, evento privado, etc."></textarea>
+            </mat-form-field>
+            <button mat-stroked-button color="primary" type="button" (click)="blockSlot()">
+              Bloquear turno
+            </button>
+          </form>
+        </mat-card>
+
+        <mat-card class="mat-elevation-z2" *ngIf="adminReservations$ | async as adminReservations">
+          <header class="card-header">
+            <div>
+              <h3>Reservas del club</h3>
+              <p>Filtrá por fecha, estado o cancha para gestionar todas las reservas.</p>
+            </div>
+          </header>
+          <p *ngIf="!adminReservations.length" class="empty-state">
+            No hay reservas que coincidan con los filtros seleccionados.
+          </p>
+          <table mat-table *ngIf="adminReservations.length" [dataSource]="adminReservations" [trackBy]="trackById" class="mat-elevation-z1">
+            <ng-container matColumnDef="court">
+              <th mat-header-cell *matHeaderCellDef>Cancha</th>
+              <td mat-cell *matCellDef="let reservation">{{ reservation.courtName }}</td>
+            </ng-container>
+            <ng-container matColumnDef="date">
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
+              <td mat-cell *matCellDef="let reservation">{{ reservation.date | date: 'dd/MM/yyyy' }}</td>
+            </ng-container>
+            <ng-container matColumnDef="time">
+              <th mat-header-cell *matHeaderCellDef>Horario</th>
+              <td mat-cell *matCellDef="let reservation">{{ reservation.startTime }} - {{ reservation.endTime }}</td>
+            </ng-container>
+            <ng-container matColumnDef="contact">
+              <th mat-header-cell *matHeaderCellDef>Contacto</th>
+              <td mat-cell *matCellDef="let reservation">
+                <div>{{ reservation.contactName }}</div>
+                <small>{{ reservation.contactEmail }}</small>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="deposit">
+              <th mat-header-cell *matHeaderCellDef>Pagos</th>
+              <td mat-cell *matCellDef="let reservation">
+                <span class="deposit-chip" [ngClass]="getDepositBadge(reservation)">
+                  Seña {{ reservation.depositPaid ? 'pagada' : 'pendiente' }}
+                </span>
+                <div class="total">Total: {{ reservation.totalPrice | currency: 'ARS':'symbol':'1.0-0' }}</div>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <td mat-cell *matCellDef="let reservation">
+                <span class="status-chip" [ngClass]="statusClass(reservation)">
+                  {{ getStatusLabel(reservation.status) }}
+                </span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <td mat-cell *matCellDef="let reservation">
+                <button mat-icon-button color="primary" type="button" (click)="markDepositPaid(reservation)" matTooltip="Registrar seña">
+                  <mat-icon>paid</mat-icon>
+                </button>
+                <button mat-icon-button color="primary" type="button" (click)="markCompleted(reservation)" matTooltip="Marcar como completada">
+                  <mat-icon>done_all</mat-icon>
+                </button>
+                <button mat-icon-button color="primary" type="button" (click)="toggleReminder(reservation)" matTooltip="Alternar recordatorio">
+                  <mat-icon>{{ reservation.remindersSent ? 'notifications_off' : 'notifications_active' }}</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" type="button" (click)="cancel(reservation)" matTooltip="Cancelar">
+                  <mat-icon>{{ reservation.status === 'bloqueada' ? 'lock_open' : 'cancel' }}</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="adminColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: adminColumns"></tr>
+          </table>
+        </mat-card>
+      </section>
+    </mat-tab>
+  </mat-tab-group>
+</div>

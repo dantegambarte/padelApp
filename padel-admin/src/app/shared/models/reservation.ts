@@ -1,4 +1,9 @@
-export type ReservationStatus = 'pendiente' | 'confirmada' | 'cancelada';
+export type ReservationStatus =
+  | 'pendiente'
+  | 'confirmada'
+  | 'completada'
+  | 'cancelada'
+  | 'bloqueada';
 
 export interface Reservation {
   id: string;
@@ -7,7 +12,16 @@ export interface Reservation {
   date: string;
   startTime: string;
   endTime: string;
+  durationMinutes: number;
   players: string[];
+  contactName: string;
+  contactEmail: string;
+  notes?: string;
+  totalPrice: number;
   deposit: number;
+  depositPaid: boolean;
   status: ReservationStatus;
+  remindersSent: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
