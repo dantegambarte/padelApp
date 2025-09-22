@@ -90,6 +90,7 @@
           <div>
             <span class="label">Cancha</span>
             <strong>{{ summary.courtName }}</strong>
+            <span class="description" *ngIf="summary.courtDescription">{{ summary.courtDescription }}</span>
           </div>
           <div>
             <span class="label">Horario</span>
@@ -120,3 +121,4 @@
     </div>
   </mat-card>
 </section>
+

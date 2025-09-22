@@ -43,7 +43,6 @@
 .summary-card.pending {
   background-color: rgba(0, 0, 0, 0.04);
 }
-
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -56,6 +55,12 @@
   color: rgba(0, 0, 0, 0.6);
 }
 
+.summary-grid .description {
+  display: block;
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.6);
+  margin-top: 0.2rem;
+}
 .players {
   margin: 0;
   font-size: 0.9rem;
@@ -68,3 +73,4 @@
     align-items: stretch;
   }
 }
+

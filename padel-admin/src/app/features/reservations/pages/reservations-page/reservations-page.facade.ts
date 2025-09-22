@@ -866,6 +866,7 @@ export class ReservationsPageFacade {
       depositPercentage,
       endTime: this.addMinutesToTime(startTime, duration),
       courtName: court.name,
+      courtDescription: court.description,
       players: playerList,
     };
   }
@@ -1221,3 +1222,4 @@ export class ReservationsPageFacade {
     return `res_${Date.now()}_${Math.floor(Math.random() * 10_000)}`;
   }
 }
+

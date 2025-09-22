@@ -39,6 +39,7 @@ export interface ReservationSummary {
   depositPercentage: number;
   endTime?: string;
   courtName?: string;
+  courtDescription?: string;
   players: string[];
 }
 
@@ -50,3 +51,4 @@ export interface FilterFormValue {
   range: { start: Date | null; end: Date | null } | null;
   search: string | null;
 }
+
