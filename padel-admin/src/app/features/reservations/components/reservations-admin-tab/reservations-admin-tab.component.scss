@@ -22,3 +22,13 @@
 .admin-form .full-width {
   grid-column: 1 / -1;
 }
+
+.time-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.time-cell .fixed-turn-chip {
+  align-self: flex-start;
+}

@@ -31,7 +31,7 @@
     <header class="card-header">
       <div>
         <h3>Bloquear turnos</h3>
-        <p>Reservá espacios para mantenimiento, torneos o eventos especiales.</p>
+        <p>Reservá espacios fijos por semana para mantenimiento, torneos o eventos especiales.</p>
       </div>
     </header>
     <form class="admin-form" [formGroup]="facade.blockForm">
@@ -45,16 +45,27 @@
         <mat-error>Seleccioná una cancha</mat-error>
       </mat-form-field>
       <mat-form-field appearance="outline">
-        <mat-label>Fecha</mat-label>
-        <input matInput [matDatepicker]="blockDate" formControlName="date" />
-        <mat-datepicker-toggle matSuffix [for]="blockDate"></mat-datepicker-toggle>
-        <mat-datepicker #blockDate></mat-datepicker>
-        <mat-error>Elegí una fecha</mat-error>
+        <mat-label>Día de la semana</mat-label>
+        <mat-select formControlName="dayOfWeek">
+          <mat-option *ngFor="let day of facade.weekdayOptions" [value]="day.value">
+            {{ day.label }}
+          </mat-option>
+        </mat-select>
+        <mat-error>Elegí un día</mat-error>
       </mat-form-field>
       <mat-form-field appearance="outline">
         <mat-label>Hora de inicio</mat-label>
         <mat-select formControlName="startTime">
-          <mat-option *ngFor="let time of facade.timeOptions" [value]="time">{{ time }}</mat-option>
+          <ng-container *ngIf="facade.blockAvailableStartTimes$ | async as timeOptions">
+            <mat-option *ngFor="let time of timeOptions" [value]="time">{{ time }}</mat-option>
+            <mat-option *ngIf="!timeOptions.length" disabled>
+              {{
+                facade.blockForm.controls.courtId.value
+                  ? 'No hay horarios libres para este turno fijo'
+                  : 'Seleccioná una cancha para ver horarios'
+              }}
+            </mat-option>
+          </ng-container>
         </mat-select>
         <mat-error>Indicá el horario</mat-error>
       </mat-form-field>
@@ -99,7 +110,12 @@
       </ng-container>
       <ng-container matColumnDef="time">
         <th mat-header-cell *matHeaderCellDef>Horario</th>
-        <td mat-cell *matCellDef="let reservation">{{ reservation.startTime }} - {{ reservation.endTime }}</td>
+        <td mat-cell *matCellDef="let reservation">
+          <div class="time-cell">
+            <span>{{ reservation.startTime }} - {{ reservation.endTime }}</span>
+            <span class="fixed-turn-chip" *ngIf="reservation.fixedTurn">Turno fijo</span>
+          </div>
+        </td>
       </ng-container>
       <ng-container matColumnDef="contact">
         <th mat-header-cell *matHeaderCellDef>Contacto</th>

@@ -24,4 +24,5 @@ export interface Reservation {
   remindersSent: boolean;
   createdAt: string;
   updatedAt?: string;
+  fixedTurn?: boolean;
 }

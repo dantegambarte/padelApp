@@ -38,6 +38,7 @@
             </strong>
           </div>
           <div matListItemMeta>
+            <span class="fixed-turn-chip" *ngIf="reservation.fixedTurn">Turno fijo</span>
             <span class="deposit-chip" [ngClass]="facade.getDepositBadge(reservation)">
               Seña {{ facade.getDepositBadge(reservation) === 'pagada' ? 'pagada' : 'pendiente' }}
             </span>
@@ -68,6 +69,7 @@
                 </header>
                 <p>{{ reservation.contactName }}</p>
                 <footer>
+                  <span class="fixed-turn-chip" *ngIf="reservation.fixedTurn">Turno fijo</span>
                   <span class="deposit-chip" [ngClass]="facade.getDepositBadge(reservation)">
                     {{ reservation.deposit | currency: 'ARS':'symbol':'1.0-0' }} ·
                     Seña {{ reservation.depositPaid ? 'pagada' : 'pendiente' }}
@@ -112,17 +114,20 @@
                         ? 'Reservar este horario'
                         : (slot.reservation?.contactName || 'Ocupado')
                     ">
-                    <div style="display: flex; align-items: center;">
-                      <mat-icon *ngIf="slot.status === 'available'" style="margin-right: 8px;">check_circle</mat-icon>
-                      <mat-icon *ngIf="slot.status === 'reserved'" style="margin-right: 8px;">event_busy</mat-icon>
-                      <mat-icon *ngIf="slot.status === 'deposit'" style="margin-right: 8px;">verified</mat-icon>
-                      <mat-icon *ngIf="slot.status === 'blocked'" style="margin-right: 8px;">block</mat-icon>
-                      <span>{{ slot.startTime }} - {{ slot.endTime }}</span>
-                    </div>
-                  </mat-chip>
-                </mat-chip-set>
-              </div>
-            </mat-expansion-panel>
+                  <div style="display: flex; align-items: center;">
+                    <mat-icon *ngIf="slot.status === 'available'" style="margin-right: 8px;">check_circle</mat-icon>
+                    <mat-icon *ngIf="slot.status === 'reserved'" style="margin-right: 8px;">event_busy</mat-icon>
+                    <mat-icon *ngIf="slot.status === 'deposit'" style="margin-right: 8px;">verified</mat-icon>
+                    <mat-icon *ngIf="slot.status === 'blocked'" style="margin-right: 8px;">block</mat-icon>
+                    <span>
+                      {{ slot.startTime }} - {{ slot.endTime }}
+                      <span class="fixed-turn-label" *ngIf="slot.reservation?.fixedTurn">· Turno fijo</span>
+                    </span>
+                  </div>
+                </mat-chip>
+              </mat-chip-set>
+            </div>
+          </mat-expansion-panel>
           </mat-accordion>
         </ng-container>
       </mat-card>

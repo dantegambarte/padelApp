@@ -8,11 +8,13 @@ import {
 
 export interface BlockSlotPayload {
   courtId: string;
-  date: string;
+  startDate: string;
   startTime: string;
   endTime: string;
   durationMinutes: number;
   reason?: string;
+  repeatWeekly?: boolean;
+  repeatWeeks?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -51,6 +53,8 @@ export class ReservationService {
   );
 
   private readonly _autoReminders = new BehaviorSubject<boolean>(true);
+
+  readonly fixedTurnWeeks = 12;
 
   private readonly _reservas = new BehaviorSubject<Reservation[]>([
     {
@@ -350,29 +354,104 @@ export class ReservationService {
 
   blockSlot(payload: BlockSlotPayload): Observable<void> {
     const court = this.getCourtById(payload.courtId);
-    if (!court) return of(void 0);
+    if (!court) {
+      return of(void 0);
+    }
 
-    const reservation: Reservation = {
-      id: this.createId(),
-      courtId: payload.courtId,
-      courtName: court.name,
-      date: payload.date,
-      startTime: payload.startTime,
-      endTime: payload.endTime,
-      durationMinutes: payload.durationMinutes,
-      players: [],
-      contactName: 'Administración',
-      contactEmail: 'info@clubpadel.com',
-      notes: payload.reason,
-      totalPrice: 0,
-      deposit: 0,
-      depositPaid: true,
-      status: 'bloqueada',
-      remindersSent: false,
-      createdAt: new Date().toISOString(),
-    };
-    this._reservas.next([...this._reservas.value, reservation]);
+    const repeatWeeks = payload.repeatWeekly
+      ? payload.repeatWeeks ?? this.fixedTurnWeeks
+      : 1;
+    const baseDate = this.parseISODate(payload.startDate);
+    const existing = [...this._reservas.value];
+    const newReservations: Reservation[] = [];
+
+    for (let index = 0; index < repeatWeeks; index++) {
+      const currentDate = this.addDays(baseDate, index * 7);
+      const dateKey = this.formatISODate(currentDate);
+      const hasConflict = [...existing, ...newReservations].some(
+        (reservation) =>
+          reservation.courtId === payload.courtId &&
+          reservation.date === dateKey &&
+          reservation.status !== 'cancelada' &&
+          this.isTimeOverlap(
+            reservation.startTime,
+            reservation.endTime,
+            payload.startTime,
+            payload.endTime
+          )
+      );
+
+      if (hasConflict) {
+        continue;
+      }
+
+      newReservations.push({
+        id: this.createId(),
+        courtId: payload.courtId,
+        courtName: court.name,
+        date: dateKey,
+        startTime: payload.startTime,
+        endTime: payload.endTime,
+        durationMinutes: payload.durationMinutes,
+        players: [],
+        contactName: 'Administración',
+        contactEmail: 'info@clubpadel.com',
+        notes:
+          payload.reason ??
+          (payload.repeatWeekly ? 'Bloqueo de turno fijo' : undefined),
+        totalPrice: 0,
+        deposit: 0,
+        depositPaid: true,
+        status: 'bloqueada',
+        remindersSent: false,
+        createdAt: new Date().toISOString(),
+        fixedTurn: payload.repeatWeekly ?? false,
+      });
+    }
+
+    if (!newReservations.length) {
+      return of(void 0);
+    }
+
+    this._reservas.next([...existing, ...newReservations]);
     return of(void 0);
+  }
+
+  private addDays(date: Date, days: number): Date {
+    const next = new Date(date);
+    next.setDate(date.getDate() + days);
+    next.setHours(0, 0, 0, 0);
+    return next;
+  }
+
+  private parseISODate(value: string): Date {
+    const [year, month, day] = value.split('-').map((item) => Number(item));
+    return new Date(year, (month ?? 1) - 1, day ?? 1);
+  }
+
+  private formatISODate(date: Date): string {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private isTimeOverlap(
+    startA: string,
+    endA: string,
+    startB: string,
+    endB: string
+  ): boolean {
+    const startMinutesA = this.parseTime(startA);
+    const endMinutesA = this.parseTime(endA);
+    const startMinutesB = this.parseTime(startB);
+    const endMinutesB = this.parseTime(endB);
+    return startMinutesA < endMinutesB && startMinutesB < endMinutesA;
+  }
+
+  private parseTime(time: string): number {
+    const [hours, minutes] = time.split(':').map((value) => Number(value));
+    return hours * 60 + minutes;
   }
 
   updateDepositPercentage(percentage: number): Observable<void> {

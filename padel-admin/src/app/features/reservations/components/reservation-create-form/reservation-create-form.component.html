@@ -28,7 +28,16 @@
       <mat-form-field appearance="outline">
         <mat-label>Hora de inicio</mat-label>
         <mat-select formControlName="startTime" required>
-          <mat-option *ngFor="let time of facade.timeOptions" [value]="time">{{ time }}</mat-option>
+          <ng-container *ngIf="facade.availableStartTimes$ | async as timeOptions">
+            <mat-option *ngFor="let time of timeOptions" [value]="time">{{ time }}</mat-option>
+            <mat-option *ngIf="!timeOptions.length" disabled>
+              {{
+                facade.reservationForm.controls.courtId.value
+                  ? 'Sin horarios disponibles para la selección elegida'
+                  : 'Seleccioná una cancha para ver horarios'
+              }}
+            </mat-option>
+          </ng-container>
         </mat-select>
         <mat-error>Indicá el horario de inicio</mat-error>
       </mat-form-field>

@@ -6,7 +6,16 @@ import {
 } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { BehaviorSubject, Observable, combineLatest, forkJoin, map, shareReplay, startWith } from 'rxjs';
+import {
+  BehaviorSubject,
+  Observable,
+  combineLatest,
+  distinctUntilChanged,
+  forkJoin,
+  map,
+  shareReplay,
+  startWith,
+} from 'rxjs';
 
 import { Court } from '../../../../shared/models/court';
 import { Reservation, ReservationStatus } from '../../../../shared/models/reservation';
@@ -40,6 +49,16 @@ export class ReservationsPageFacade {
     { label: 'Mes', value: 'month' },
   ];
 
+  readonly weekdayOptions = [
+    { label: 'Lunes', value: 1 },
+    { label: 'Martes', value: 2 },
+    { label: 'Miércoles', value: 3 },
+    { label: 'Jueves', value: 4 },
+    { label: 'Viernes', value: 5 },
+    { label: 'Sábado', value: 6 },
+    { label: 'Domingo', value: 0 },
+  ];
+
   readonly durationOptions = [
     { label: '30 minutos', value: 30 },
     { label: '1 hora', value: 60 },
@@ -59,8 +78,6 @@ export class ReservationsPageFacade {
     { label: 'Bloqueos', value: 'bloqueada' },
   ];
 
-  readonly timeOptions = this.generateTimeOptions();
-
   readonly filterForm = this.fb.group({
     viewMode: this.fb.control<CalendarViewMode>('week', { nonNullable: true }),
     courtId: this.fb.control<string>('all', { nonNullable: true }),
@@ -78,7 +95,7 @@ export class ReservationsPageFacade {
   readonly reservationForm = this.fb.group({
     courtId: ['', Validators.required],
     date: [this.today, Validators.required],
-    startTime: [this.timeOptions[20], Validators.required],
+    startTime: this.fb.control<string | null>(null, Validators.required),
     duration: [60, Validators.required],
     contactName: ['', Validators.required],
     contactEmail: ['', [Validators.required, Validators.email]],
@@ -98,8 +115,10 @@ export class ReservationsPageFacade {
 
   readonly blockForm = this.fb.group({
     courtId: ['', Validators.required],
-    date: [this.today, Validators.required],
-    startTime: [this.timeOptions[0], Validators.required],
+    dayOfWeek: this.fb.control<number>(this.today.getDay(), {
+      nonNullable: true,
+    }),
+    startTime: this.fb.control<string | null>(null, Validators.required),
     duration: [60, Validators.required],
     reason: [''],
   });
@@ -266,6 +285,93 @@ export class ReservationsPageFacade {
     )
   );
 
+  readonly availableStartTimes$ = combineLatest([
+    this.reservas$,
+    this.courts$,
+    this.reservationForm.controls.courtId.valueChanges.pipe(
+      startWith(this.reservationForm.controls.courtId.value ?? '')
+    ),
+    this.reservationForm.controls.date.valueChanges.pipe(
+      startWith(this.reservationForm.controls.date.value ?? this.today)
+    ),
+    this.reservationForm.controls.duration.valueChanges.pipe(
+      startWith(this.reservationForm.controls.duration.value ?? 60)
+    ),
+  ]).pipe(
+    map(([reservations, courts, courtId, date, duration]) => {
+      if (!courtId || !date) {
+        return [] as string[];
+      }
+      const court = courts.find((item) => item.id === courtId);
+      if (!court) {
+        return [];
+      }
+      const slots = this.generateSlotsForCourt(
+        reservations,
+        court,
+        this.toISODate(date),
+        duration ?? 60
+      );
+      return slots
+        .filter((slot) => slot.status === 'available')
+        .map((slot) => slot.startTime);
+    }),
+    distinctUntilChanged((a, b) => this.areArraysEqual(a, b)),
+    shareReplay(1)
+  );
+
+  readonly blockAvailableStartTimes$ = combineLatest([
+    this.reservas$,
+    this.courts$,
+    this.blockForm.controls.courtId.valueChanges.pipe(
+      startWith(this.blockForm.controls.courtId.value ?? '')
+    ),
+    this.blockForm.controls.dayOfWeek.valueChanges.pipe(
+      startWith(this.blockForm.controls.dayOfWeek.value ?? this.today.getDay())
+    ),
+    this.blockForm.controls.duration.valueChanges.pipe(
+      startWith(this.blockForm.controls.duration.value ?? 60)
+    ),
+    this.selectedDate$,
+  ]).pipe(
+    map(([reservations, courts, courtId, dayOfWeek, duration, referenceDate]) => {
+      if (!courtId || dayOfWeek === null || dayOfWeek === undefined) {
+        return [] as string[];
+      }
+      const court = courts.find((item) => item.id === courtId);
+      if (!court) {
+        return [];
+      }
+      const start = this.getNextDateForDay(referenceDate, dayOfWeek);
+      const occurrences = Math.max(1, this.reservationService.fixedTurnWeeks);
+      let available: string[] | null = null;
+      for (let index = 0; index < occurrences; index++) {
+        const dateCandidate = new Date(start);
+        dateCandidate.setDate(start.getDate() + index * 7);
+        const slots = this.generateSlotsForCourt(
+          reservations,
+          court,
+          this.toISODate(dateCandidate),
+          duration ?? 60
+        );
+        const current = slots
+          .filter((slot) => slot.status === 'available')
+          .map((slot) => slot.startTime);
+        if (available === null) {
+          available = current;
+        } else {
+          available = available.filter((time) => current.includes(time));
+        }
+        if (!available.length) {
+          break;
+        }
+      }
+      return available ?? [];
+    }),
+    distinctUntilChanged((a, b) => this.areArraysEqual(a, b)),
+    shareReplay(1)
+  );
+
   readonly selectedDateLabel$ = combineLatest([
     this.selectedDate$,
     this.filterForm.controls.viewMode.valueChanges.pipe(
@@ -407,6 +513,64 @@ export class ReservationsPageFacade {
           { emitEvent: false }
         );
       });
+
+    this.availableStartTimes$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((options) => {
+        const control = this.reservationForm.controls.startTime;
+        const current = control.value;
+        if (!options.length) {
+          if (current !== null) {
+            control.setValue(null, { emitEvent: false });
+          }
+          return;
+        }
+        if (!current || !options.includes(current)) {
+          control.setValue(options[0], { emitEvent: false });
+        }
+      });
+
+    this.blockAvailableStartTimes$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((options) => {
+        const control = this.blockForm.controls.startTime;
+        const current = control.value;
+        if (!options.length) {
+          if (current !== null) {
+            control.setValue(null, { emitEvent: false });
+          }
+          return;
+        }
+        if (!current || !options.includes(current)) {
+          control.setValue(options[0], { emitEvent: false });
+        }
+      });
+
+    this.filterForm.controls.range.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((range) => {
+        const start = range?.start;
+        if (!start) {
+          return;
+        }
+        const normalized = this.getStartOfDay(start);
+        if (this.selectedDateSubject.value.getTime() === normalized.getTime()) {
+          return;
+        }
+        this.selectedDateSubject.next(normalized);
+        const currentReservationDate = this.reservationForm.controls.date.value;
+        if (
+          !currentReservationDate ||
+          currentReservationDate.getTime() !== normalized.getTime()
+        ) {
+          this.reservationForm.controls.date.setValue(normalized);
+        }
+        const currentDayOfWeek = this.blockForm.controls.dayOfWeek.value;
+        const nextDay = normalized.getDay();
+        if (currentDayOfWeek !== nextDay) {
+          this.blockForm.controls.dayOfWeek.setValue(nextDay);
+        }
+      });
   }
 
   changeRole(role: 'player' | 'admin') {
@@ -447,12 +611,22 @@ export class ReservationsPageFacade {
     }
     const normalized = this.getStartOfDay(date);
     this.selectedDateSubject.next(normalized);
-    this.filterForm.controls.range.patchValue({
-      start: normalized,
-      end: normalized,
-    });
-    this.reservationForm.controls.date.setValue(normalized);
-    this.blockForm.controls.date.setValue(normalized);
+    this.filterForm.controls.range.patchValue(
+      {
+        start: normalized,
+        end: normalized,
+      },
+      { emitEvent: false }
+    );
+    const currentReservationDate = this.reservationForm.controls.date.value;
+    if (!currentReservationDate || currentReservationDate.getTime() !== normalized.getTime()) {
+      this.reservationForm.controls.date.setValue(normalized);
+    }
+    const currentDayOfWeek = this.blockForm.controls.dayOfWeek.value;
+    const nextDay = normalized.getDay();
+    if (currentDayOfWeek !== nextDay) {
+      this.blockForm.controls.dayOfWeek.setValue(nextDay);
+    }
   }
 
   selectSlot(slot: AvailabilitySlot, court: Court, date: Date) {
@@ -615,24 +789,45 @@ export class ReservationsPageFacade {
     }
     const value = this.blockForm.getRawValue();
     const court = this.reservationService.getCourtById(value.courtId ?? '');
-    if (!court || !value.date || !value.startTime) return;
+    if (
+      !court ||
+      value.dayOfWeek === undefined ||
+      value.dayOfWeek === null ||
+      !value.startTime
+    )
+      return;
 
     const duration = value.duration ?? 60;
     const endTime = this.addMinutesToTime(value.startTime, duration);
+    const baseDate = this.getNextDateForDay(
+      this.selectedDateSubject.value,
+      value.dayOfWeek
+    );
 
     this.reservationService
       .blockSlot({
         courtId: court.id,
-        date: this.toISODate(value.date),
+        startDate: this.toISODate(baseDate),
         startTime: value.startTime,
         endTime,
         durationMinutes: duration,
         reason: value.reason ?? undefined,
+        repeatWeekly: true,
+        repeatWeeks: this.reservationService.fixedTurnWeeks,
       })
       .subscribe(() => {
-        this.snackBar.open('Se bloqueó el turno seleccionado.', 'Cerrar', {
-          duration: 3000,
-        });
+        const dayLabel =
+          this.weekdayOptions.find((option) => option.value === value.dayOfWeek)
+            ?.label ?? 'día seleccionado';
+        this.snackBar.open(
+          `Se bloqueó un turno fijo los ${dayLabel.toLowerCase()} a las ${
+            value.startTime
+          }.`,
+          'Cerrar',
+          {
+            duration: 3000,
+          }
+        );
       });
   }
 
@@ -893,15 +1088,6 @@ export class ReservationsPageFacade {
     return slots;
   }
 
-  private generateTimeOptions(): string[] {
-    const options: string[] = [];
-    for (let hour = 7; hour <= 23; hour++) {
-      options.push(`${hour.toString().padStart(2, '0')}:00`);
-      options.push(`${hour.toString().padStart(2, '0')}:30`);
-    }
-    return options;
-  }
-
   private compareReservations(a: Reservation, b: Reservation): number {
     if (a.date === b.date) {
       return this.parseTime(a.startTime) - this.parseTime(b.startTime);
@@ -956,6 +1142,13 @@ export class ReservationsPageFacade {
     return startMinutesA < endMinutesB && startMinutesB < endMinutesA;
   }
 
+  private areArraysEqual(first: string[], second: string[]): boolean {
+    if (first.length !== second.length) {
+      return false;
+    }
+    return first.every((value, index) => value === second[index]);
+  }
+
   private getStartOfDay(date: Date): Date {
     const normalized = new Date(date);
     normalized.setHours(0, 0, 0, 0);
@@ -975,6 +1168,17 @@ export class ReservationsPageFacade {
     const monday = new Date(date);
     monday.setDate(date.getDate() + diff);
     return this.getStartOfDay(monday);
+  }
+
+  private getNextDateForDay(reference: Date, dayOfWeek: number): Date {
+    const normalizedReference = this.getStartOfDay(reference);
+    const currentDay = normalizedReference.getDay();
+    const diff = (dayOfWeek - currentDay + 7) % 7;
+    const next = new Date(normalizedReference);
+    if (diff !== 0) {
+      next.setDate(normalizedReference.getDate() + diff);
+    }
+    return this.getStartOfDay(next);
   }
 
   private formatDayLabel(date: Date): string {
