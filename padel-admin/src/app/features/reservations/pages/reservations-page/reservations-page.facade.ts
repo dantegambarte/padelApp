@@ -134,6 +134,7 @@ export class ReservationsPageFacade {
     { label: 'Reservada', class: 'reserved' },
     { label: 'Seña pagada', class: 'deposit' },
     { label: 'Bloqueada', class: 'blocked' },
+    { label: 'Sin turnos disponibles', class: 'unavailable' },
   ];
 
   private readonly currentUser = {
@@ -142,6 +143,9 @@ export class ReservationsPageFacade {
   };
 
   private reservationsSnapshot: Reservation[] = [];
+  private courtsSnapshot: Court[] = [];
+  private currentDuration: number | null = 60;
+  private currentCourtId: string = 'all';
 
   private readonly selectedDateSubject = new BehaviorSubject<Date>(this.today);
   readonly selectedDate$ = this.selectedDateSubject.asObservable();
@@ -323,6 +327,9 @@ export class ReservationsPageFacade {
       (reservation) =>
         reservation.date === dateKey && reservation.status !== 'cancelada'
     );
+    if (this.isDayFullyBooked(dateKey)) {
+      return 'unavailable';
+    }
     if (!reservations.length) {
       return '';
     }
@@ -365,6 +372,24 @@ export class ReservationsPageFacade {
     this.reservas$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((reservations) => (this.reservationsSnapshot = reservations));
+
+    this.courts$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((courts) => (this.courtsSnapshot = courts));
+
+    this.currentDuration = this.filterForm.controls.duration.value;
+    this.filterForm.controls.duration.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((duration) => {
+        this.currentDuration = duration;
+      });
+
+    this.currentCourtId = this.filterForm.controls.courtId.value ?? 'all';
+    this.filterForm.controls.courtId.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((courtId) => {
+        this.currentCourtId = courtId ?? 'all';
+      });
 
     combineLatest([
       this.depositPolicy$,
@@ -670,6 +695,32 @@ export class ReservationsPageFacade {
         duration
       );
       return { court, slots };
+    });
+  }
+
+  private isDayFullyBooked(dateKey: string): boolean {
+    if (!this.courtsSnapshot.length) {
+      return false;
+    }
+    const consideredCourts =
+      this.currentCourtId === 'all'
+        ? this.courtsSnapshot
+        : this.courtsSnapshot.filter((court) => court.id === this.currentCourtId);
+
+    if (!consideredCourts.length) {
+      return false;
+    }
+
+    const duration = this.currentDuration ?? 30;
+
+    return consideredCourts.every((court) => {
+      const slots = this.generateSlotsForCourt(
+        this.reservationsSnapshot,
+        court,
+        dateKey,
+        duration
+      );
+      return slots.every((slot) => slot.status !== 'available');
     });
   }
 

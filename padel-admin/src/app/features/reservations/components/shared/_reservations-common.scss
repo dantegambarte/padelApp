@@ -3,7 +3,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin: 1rem;
 }
 
 .card-header h3 {
@@ -48,6 +48,11 @@
   color: #424242;
 }
 
+.legend-dot.unavailable {
+  background-color: rgba(229, 57, 53, 0.2);
+  color: #c62828;
+}
+
 .status-chip.cancelled {
   background-color: rgba(117, 117, 117, 0.14);
   color: #616161;
@@ -66,7 +71,7 @@
 }
 
 .empty-state {
-  margin: 0.5rem 0;
+  margin: 0.5rem 1rem;
   color: rgba(0, 0, 0, 0.6);
   font-style: italic;
 }
