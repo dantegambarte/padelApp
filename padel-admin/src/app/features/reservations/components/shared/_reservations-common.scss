@@ -1,0 +1,96 @@
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.card-header h3 {
+  margin: 0;
+}
+
+.card-header p {
+  margin: 0.25rem 0 0;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.status-chip,
+.deposit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.status-chip.reserved,
+.legend-dot.reserved,
+.slot-list .reserved.mat-mdc-standard-chip {
+  background-color: rgba(244, 67, 54, 0.12);
+  color: #c62828;
+}
+
+.status-chip.deposit,
+.legend-dot.deposit,
+.slot-list .deposit.mat-mdc-standard-chip {
+  background-color: rgba(33, 150, 243, 0.12);
+  color: #1565c0;
+}
+
+.status-chip.blocked,
+.legend-dot.blocked,
+.slot-list .blocked.mat-mdc-standard-chip {
+  background-color: rgba(158, 158, 158, 0.16);
+  color: #424242;
+}
+
+.status-chip.cancelled {
+  background-color: rgba(117, 117, 117, 0.14);
+  color: #616161;
+}
+
+.deposit-chip.pagada,
+.legend-dot.available,
+.slot-list .available.mat-mdc-standard-chip {
+  background-color: rgba(76, 175, 80, 0.12);
+  color: #2e7d32;
+}
+
+.deposit-chip.pendiente {
+  background-color: rgba(255, 152, 0, 0.12);
+  color: #e65100;
+}
+
+.empty-state {
+  margin: 0.5rem 0;
+  color: rgba(0, 0, 0, 0.6);
+  font-style: italic;
+}
+
+.total {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+table {
+  width: 100%;
+}
+
+table th {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+table td {
+  font-size: 0.9rem;
+}
+
+.status-icon mat-icon {
+  font-size: 1.5rem;
+}

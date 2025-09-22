@@ -1,0 +1,211 @@
+<section class="calendar-section" *ngIf="facade.selectedDate$ | async as selectedDate">
+  <mat-card class="calendar-section__calendar mat-elevation-z4">
+    <header class="card-header">
+      <div>
+        <h3>Calendario interactivo</h3>
+        <p>Colores en tiempo real para turnos disponibles, reservados y con seña pagada.</p>
+      </div>
+    </header>
+    <mat-calendar [selected]="selectedDate" (selectedChange)="facade.onDateSelected($event)"
+      [dateClass]="facade.calendarDateClass"></mat-calendar>
+    <div class="calendar-legend">
+      <div *ngFor="let item of facade.calendarLegend" class="legend-item">
+        <span class="legend-dot" [ngClass]="item.class"></span>
+        <span>{{ item.label }}</span>
+      </div>
+    </div>
+
+    <section class="selected-day" *ngIf="facade.selectedDateReservations$ | async as dayReservations">
+      <h4>Reservas para {{ selectedDate | date: 'EEEE d/M' }}</h4>
+      <p *ngIf="!dayReservations.length" class="empty-state">
+        No hay reservas registradas para este día. Seleccioná un horario disponible para comenzar.
+      </p>
+      <mat-list *ngIf="dayReservations.length">
+        <mat-list-item *ngFor="let reservation of dayReservations" [ngClass]="facade.statusClass(reservation)">
+          <div matListItemIcon class="status-icon">
+            <mat-icon *ngIf="reservation.status === 'bloqueada'">block</mat-icon>
+            <mat-icon *ngIf="reservation.status === 'cancelada'">cancel</mat-icon>
+            <mat-icon *ngIf="reservation.depositPaid && reservation.status !== 'bloqueada'">verified</mat-icon>
+            <mat-icon *ngIf="!reservation.depositPaid && reservation.status !== 'bloqueada'">event_busy</mat-icon>
+          </div>
+          <div matListItemTitle>
+            {{ reservation.startTime }} - {{ reservation.endTime }} · {{ reservation.courtName }}
+          </div>
+          <div matListItemLine>
+            {{ reservation.contactName }} ·
+            <strong>
+              {{ facade.getStatusLabel(reservation.status) }}
+            </strong>
+          </div>
+          <div matListItemMeta>
+            <span class="deposit-chip" [ngClass]="facade.getDepositBadge(reservation)">
+              Seña {{ facade.getDepositBadge(reservation) === 'pagada' ? 'pagada' : 'pendiente' }}
+            </span>
+          </div>
+        </mat-list-item>
+      </mat-list>
+    </section>
+  </mat-card>
+
+  <section class="calendar-section__details" [ngSwitch]="facade.filterForm.controls.viewMode.value">
+    <ng-container *ngSwitchCase="'week'">
+      <mat-card class="mat-elevation-z2">
+        <header class="card-header">
+          <div>
+            <h3>Vista semanal</h3>
+            <p>Control total de las reservas y bloqueos para los próximos siete días.</p>
+          </div>
+        </header>
+        <div class="week-grid" *ngIf="facade.weekOverview$ | async as overview">
+          <mat-card class="week-card" *ngFor="let day of overview">
+            <h4>{{ day.label }}</h4>
+            <div class="week-card__content" *ngIf="day.reservations.length; else emptyDay">
+              <article class="week-card__reservation" *ngFor="let reservation of day.reservations"
+                [ngClass]="facade.statusClass(reservation)">
+                <header>
+                  <span class="time">{{ reservation.startTime }} - {{ reservation.endTime }}</span>
+                  <span class="court">{{ reservation.courtName }}</span>
+                </header>
+                <p>{{ reservation.contactName }}</p>
+                <footer>
+                  <span class="deposit-chip" [ngClass]="facade.getDepositBadge(reservation)">
+                    {{ reservation.deposit | currency: 'ARS':'symbol':'1.0-0' }} ·
+                    Seña {{ reservation.depositPaid ? 'pagada' : 'pendiente' }}
+                  </span>
+                </footer>
+              </article>
+            </div>
+            <ng-template #emptyDay>
+              <p class="empty-state">Sin reservas aún.</p>
+            </ng-template>
+          </mat-card>
+        </div>
+      </mat-card>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'day'">
+      <mat-card class="mat-elevation-z2 day-view">
+        <header class="card-header">
+          <div>
+            <h3>Disponibilidad por cancha</h3>
+            <p>Elegí un horario libre para completar la reserva en segundos.</p>
+          </div>
+        </header>
+        <ng-container *ngIf="facade.dayAvailability$ | async as availability">
+          <mat-accordion multi>
+            <mat-expansion-panel *ngFor="let courtAvailability of availability" [expanded]="true">
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  {{ courtAvailability.court.name }}
+                </mat-panel-title>
+                <mat-panel-description>
+                  {{ courtAvailability.court.description }} · $
+                  {{ courtAvailability.court.pricePerHour | number: '1.0-0' }}/hora
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+              <div class="slot-list">
+                <mat-chip-set aria-label="Turnos disponibles">
+                  <mat-chip *ngFor="let slot of courtAvailability.slots" [ngClass]="slot.status"
+                    [disabled]="slot.status !== 'available'"
+                    (click)="facade.selectSlot(slot, courtAvailability.court, selectedDate)" [matTooltip]="
+                      slot.status === 'available'
+                        ? 'Reservar este horario'
+                        : (slot.reservation?.contactName || 'Ocupado')
+                    ">
+                    <mat-icon *ngIf="slot.status === 'available'">check_circle</mat-icon>
+                    <mat-icon *ngIf="slot.status === 'reserved'">event_busy</mat-icon>
+                    <mat-icon *ngIf="slot.status === 'deposit'">verified</mat-icon>
+                    <mat-icon *ngIf="slot.status === 'blocked'">block</mat-icon>
+                    <span>{{ slot.startTime }} - {{ slot.endTime }}</span>
+                  </mat-chip>
+                </mat-chip-set>
+              </div>
+            </mat-expansion-panel>
+          </mat-accordion>
+        </ng-container>
+      </mat-card>
+    </ng-container>
+
+    <ng-container *ngSwitchDefault>
+      <mat-card class="mat-elevation-z2">
+        <header class="card-header">
+          <div>
+            <h3>Resumen mensual</h3>
+            <p>Visualizá rápidamente qué días tienen más movimiento y planificá tu agenda.</p>
+          </div>
+        </header>
+        <ng-container *ngIf="facade.monthSummary$ | async as summary">
+          <p *ngIf="!summary.length" class="empty-state">
+            Aún no hay reservas en este mes. Promocioná horarios libres para incrementar la ocupación.
+          </p>
+          <div class="month-summary" *ngIf="summary.length">
+            <div class="month-summary__item" *ngFor="let day of summary">
+              <span class="day">{{ day.date | date: 'd/M' }}</span>
+              <span class="count">
+                {{ day.count }} turno{{ day.count === 1 ? '' : 's' }}
+              </span>
+            </div>
+          </div>
+        </ng-container>
+      </mat-card>
+    </ng-container>
+  </section>
+</section>
+
+<section class="alerts" aria-label="Avisos y notificaciones">
+  <mat-card class="mat-elevation-z2" *ngIf="facade.conflictWarnings$ | async as warnings">
+    <header class="card-header">
+      <div>
+        <h3>Alertas de conflictos</h3>
+        <p>Turnos superpuestos o bloqueados que requieren atención.</p>
+      </div>
+    </header>
+    <div *ngIf="warnings.length; else noConflicts">
+      <mat-list>
+        <mat-list-item *ngFor="let warning of warnings">
+          <mat-icon matListItemIcon color="warn">warning</mat-icon>
+          <div matListItemTitle>
+            {{ warning.courtName }} · {{ warning.date | date: 'dd/MM/yyyy' }}
+          </div>
+          <div matListItemLine>
+            {{ warning.reservations[0].startTime }} / {{ warning.reservations[1].startTime }} · Revisar disponibilidad
+          </div>
+        </mat-list-item>
+      </mat-list>
+    </div>
+    <ng-template #noConflicts>
+      <p class="empty-state">No se detectaron conflictos de agenda.</p>
+    </ng-template>
+  </mat-card>
+
+  <mat-card class="mat-elevation-z2" *ngIf="facade.reminders$ | async as reminders">
+    <header class="card-header">
+      <div>
+        <h3>Recordatorios automáticos</h3>
+        <ng-container *ngIf="facade.autoReminders$ | async; else remindersDisabled">
+          <p>Notificaremos a los jugadores antes del turno para completar el pago restante.</p>
+        </ng-container>
+      </div>
+    </header>
+    <div *ngIf="reminders.length; else noReminders">
+      <mat-list>
+        <mat-list-item *ngFor="let reminder of reminders">
+          <mat-icon matListItemIcon color="primary">notifications_active</mat-icon>
+          <div matListItemTitle>
+            {{ reminder.reservation.contactName }} · {{ reminder.reservation.courtName }}
+          </div>
+          <div matListItemLine>
+            Turno en {{ reminder.daysToGo }} día{{ reminder.daysToGo === 1 ? '' : 's' }} ·
+            {{ reminder.reservation.startTime }}
+          </div>
+        </mat-list-item>
+      </mat-list>
+    </div>
+    <ng-template #noReminders>
+      <p class="empty-state">Sin recordatorios pendientes por el momento.</p>
+    </ng-template>
+    <ng-template #remindersDisabled>
+      <p>Los recordatorios automáticos están desactivados. Activalos desde el panel de administración.</p>
+    </ng-template>
+  </mat-card>
+</section>

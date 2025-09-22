@@ -1,0 +1,113 @@
+<section class="reservation-form" [formGroup]="facade.reservationForm">
+  <mat-card class="mat-elevation-z2">
+    <header class="card-header">
+      <div>
+        <h3>Reservar un turno</h3>
+        <p>Completá los datos de contacto y confirmá la seña para asegurar tu lugar.</p>
+      </div>
+    </header>
+    <div class="form-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Cancha</mat-label>
+        <mat-select formControlName="courtId" required>
+          <mat-option *ngFor="let court of facade.courts$ | async" [value]="court.id">
+            {{ court.name }} · ${{ court.pricePerHour | number: '1.0-0' }}/h
+          </mat-option>
+        </mat-select>
+        <mat-error>Seleccioná una cancha</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha</mat-label>
+        <input matInput [matDatepicker]="reservationDate" formControlName="date" />
+        <mat-datepicker-toggle matSuffix [for]="reservationDate"></mat-datepicker-toggle>
+        <mat-datepicker #reservationDate></mat-datepicker>
+        <mat-error>Elegí la fecha del turno</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Hora de inicio</mat-label>
+        <mat-select formControlName="startTime" required>
+          <mat-option *ngFor="let time of facade.timeOptions" [value]="time">{{ time }}</mat-option>
+        </mat-select>
+        <mat-error>Indicá el horario de inicio</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Duración</mat-label>
+        <mat-select formControlName="duration" required>
+          <mat-option *ngFor="let option of facade.durationOptions" [value]="option.value">
+            {{ option.label }}
+          </mat-option>
+        </mat-select>
+        <mat-error>Seleccioná la duración del turno</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre del responsable</mat-label>
+        <input matInput formControlName="contactName" placeholder="Nombre y apellido" />
+        <mat-error>Ingresá un nombre de contacto</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Email de contacto</mat-label>
+        <input matInput formControlName="contactEmail" placeholder="nombre@correo.com" />
+        <mat-error>Ingresá un email válido</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Jugadores</mat-label>
+        <textarea matInput formControlName="players" placeholder="Ej: Ana, Bruno, Carla, Diego" rows="3"></textarea>
+        <mat-error>Indicanos quiénes juegan</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="notes">
+        <mat-label>Notas adicionales</mat-label>
+        <textarea matInput formControlName="notes" placeholder="Traigo invitados..." rows="3"></textarea>
+      </mat-form-field>
+
+      <mat-slide-toggle formControlName="payDeposit" color="primary">
+        Pagar seña ahora ({{ (facade.depositPercentage$ | async)! * 100 | number: '1.0-0' }}%)
+      </mat-slide-toggle>
+    </div>
+
+    <section class="summary" *ngIf="facade.reservationSummary$ | async as summary">
+      <mat-card class="summary-card mat-elevation-z1" [ngClass]="summary.isValid ? 'ready' : 'pending'">
+        <h4>Resumen de pago</h4>
+        <p *ngIf="!summary.isValid" class="empty-state">
+          Completá la cancha, horario y jugadores para calcular el monto de la seña.
+        </p>
+        <div *ngIf="summary.isValid" class="summary-grid">
+          <div>
+            <span class="label">Cancha</span>
+            <strong>{{ summary.courtName }}</strong>
+          </div>
+          <div>
+            <span class="label">Horario</span>
+            <strong>{{ facade.reservationForm.value.startTime }} - {{ summary.endTime }}</strong>
+          </div>
+          <div>
+            <span class="label">Monto total</span>
+            <strong>{{ summary.total | currency: 'ARS':'symbol':'1.0-0' }}</strong>
+          </div>
+          <div>
+            <span class="label">Seña ({{ summary.depositPercentage * 100 | number: '1.0-0' }}%)</span>
+            <strong>{{ summary.deposit | currency: 'ARS':'symbol':'1.0-0' }}</strong>
+          </div>
+        </div>
+        <p *ngIf="summary.players.length" class="players">
+          Participantes: {{ summary.players.join(', ') }}
+        </p>
+      </mat-card>
+    </section>
+
+    <div class="form-actions">
+      <button mat-flat-button color="primary" type="button" (click)="reserve(true)">
+        Reservar y pagar seña
+      </button>
+      <button mat-stroked-button color="accent" type="button" (click)="reserve(false)">
+        Reservar sin pagar ahora
+      </button>
+    </div>
+  </mat-card>
+</section>

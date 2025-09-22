@@ -1,0 +1,11 @@
+@import "../shared/reservations-common";
+
+:host {
+  display: block;
+}
+
+.my-reservations {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}

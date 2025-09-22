@@ -1,0 +1,76 @@
+<section class="filters" [formGroup]="facade.filterForm">
+  <div class="filters__row">
+    <mat-button-toggle-group class="view-toggle" formControlName="viewMode"
+      aria-label="Cambiar la vista del calendario">
+      <mat-button-toggle *ngFor="let mode of facade.viewModes" [value]="mode.value">
+        {{ mode.label }}
+      </mat-button-toggle>
+    </mat-button-toggle-group>
+
+    <div class="navigation-buttons">
+      <button mat-icon-button type="button" (click)="facade.navigate('prev')" matTooltip="Ver periodo anterior">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <button mat-stroked-button type="button" (click)="facade.onDateSelected(facade.today)">
+        Hoy
+      </button>
+      <button mat-icon-button type="button" (click)="facade.navigate('next')" matTooltip="Ver periodo siguiente">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="filters__row">
+    <mat-form-field appearance="outline">
+      <mat-label>Cancha</mat-label>
+      <mat-select formControlName="courtId">
+        <mat-option value="all">Todas las canchas</mat-option>
+        <mat-option *ngFor="let court of facade.courts$ | async" [value]="court.id">
+          {{ court.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Duración del turno</mat-label>
+      <mat-select formControlName="duration">
+        <mat-option [value]="null">Cualquier duración</mat-option>
+        <mat-option *ngFor="let option of facade.durationOptions" [value]="option.value">
+          {{ option.label }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Estado</mat-label>
+      <mat-select formControlName="status">
+        <mat-option *ngFor="let status of facade.statusFilters" [value]="status.value">
+          {{ status.label }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div class="date-range" formGroupName="range">
+      <mat-form-field appearance="outline">
+        <mat-label>Rango de fechas</mat-label>
+        <mat-date-range-input [rangePicker]="picker">
+          <input matStartDate formControlName="start" placeholder="Desde" />
+          <input matEndDate formControlName="end" placeholder="Hasta" />
+        </mat-date-range-input>
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-date-range-picker #picker></mat-date-range-picker>
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" *ngIf="facade.isAdmin$ | async">
+      <mat-label>Buscar reservas</mat-label>
+      <input matInput formControlName="search" placeholder="Nombre, email o cancha" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+  </div>
+
+  <div class="policy-banner" *ngIf="facade.depositPolicy$ | async as policy">
+    <mat-icon color="primary">info</mat-icon>
+    <span>{{ policy }}</span>
+  </div>
+</section>

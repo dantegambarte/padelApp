@@ -1,0 +1,153 @@
+@import "../shared/reservations-common";
+
+:host {
+  display: block;
+  margin-top: 1rem;
+}
+
+.calendar-section {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(0, 2fr);
+  gap: 1.5rem;
+}
+
+.calendar-section__calendar {
+  position: sticky;
+  top: 1.5rem;
+  align-self: flex-start;
+  padding-bottom: 1rem;
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.legend-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.2);
+  display: inline-block;
+}
+
+.selected-day {
+  margin-top: 1.5rem;
+}
+
+.selected-day h4 {
+  margin-bottom: 0.5rem;
+}
+
+.selected-day .empty-state {
+  margin: 0.5rem 0;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.week-card {
+  padding: 1rem;
+  border-radius: 1rem;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.week-card__reservation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: #fff;
+  margin-bottom: 0.75rem;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.week-card__reservation header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.week-card__reservation .court {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.week-card__reservation footer {
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.day-view .slot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 0 0.5rem;
+}
+
+.slot-list mat-chip {
+  --mdc-chip-elevated-container-color: transparent;
+  border-radius: 999px;
+  min-width: 120px;
+  justify-content: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+.slot-list mat-chip[disabled] {
+  cursor: not-allowed;
+}
+
+.alerts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0 1rem;
+}
+
+.month-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.month-summary__item {
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background-color: rgba(0, 0, 0, 0.04);
+  display: flex;
+  justify-content: space-between;
+  font-weight: 500;
+}
+
+.month-summary__item .day {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 960px) {
+  :host {
+    margin-top: 0.5rem;
+  }
+
+  .calendar-section {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-section__calendar {
+    position: relative;
+    top: 0;
+  }
+}

@@ -1,0 +1,17 @@
+<header class="page-header">
+  <div class="page-header__titles">
+    <h1>Reservas de canchas</h1>
+    <p class="subtitle">
+      Organizá tus turnos, pagá la seña y gestioná la disponibilidad en un único lugar.
+    </p>
+    <div class="selected-date" *ngIf="facade.selectedDateLabel$ | async as selectedLabel">
+      <mat-icon>event</mat-icon>
+      <span>{{ selectedLabel }}</span>
+    </div>
+  </div>
+  <mat-button-toggle-group class="role-toggle" [value]="facade.roleControl.value"
+    (change)="facade.changeRole($event.value)" aria-label="Seleccionar modo de visualización">
+    <mat-button-toggle value="player">Modo jugador</mat-button-toggle>
+    <mat-button-toggle value="admin">Modo administrador</mat-button-toggle>
+  </mat-button-toggle-group>
+</header>

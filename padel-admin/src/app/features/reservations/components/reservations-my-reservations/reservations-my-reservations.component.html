@@ -1,0 +1,106 @@
+<section class="my-reservations">
+  <mat-card class="mat-elevation-z2" *ngIf="facade.myUpcomingReservations$ | async as upcoming">
+    <header class="card-header">
+      <div>
+        <h3 [matBadge]="upcoming.length" matBadgeColor="primary">Próximos turnos</h3>
+        <p>Gestioná cancelaciones, pagos de seña y recordatorios.</p>
+      </div>
+    </header>
+    <p *ngIf="!upcoming.length" class="empty-state">
+      No tenés reservas futuras. Elegí un horario disponible desde el calendario.
+    </p>
+    <table mat-table *ngIf="upcoming.length" [dataSource]="upcoming" [trackBy]="facade.trackById"
+      class="mat-elevation-z1">
+      <ng-container matColumnDef="date">
+        <th mat-header-cell *matHeaderCellDef>Fecha</th>
+        <td mat-cell *matCellDef="let reservation">
+          {{ reservation.date | date: 'dd/MM/yyyy' }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="court">
+        <th mat-header-cell *matHeaderCellDef>Cancha</th>
+        <td mat-cell *matCellDef="let reservation">{{ reservation.courtName }}</td>
+      </ng-container>
+      <ng-container matColumnDef="time">
+        <th mat-header-cell *matHeaderCellDef>Horario</th>
+        <td mat-cell *matCellDef="let reservation">
+          {{ reservation.startTime }} - {{ reservation.endTime }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let reservation">
+          <span class="status-chip" [ngClass]="facade.statusClass(reservation)">
+            {{ facade.getStatusLabel(reservation.status) }}
+          </span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="deposit">
+        <th mat-header-cell *matHeaderCellDef>Seña</th>
+        <td mat-cell *matCellDef="let reservation">
+          <span class="deposit-chip" [ngClass]="facade.getDepositBadge(reservation)">
+            {{ reservation.deposit | currency: 'ARS':'symbol':'1.0-0' }}
+          </span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Acciones</th>
+        <td mat-cell *matCellDef="let reservation">
+          <button mat-icon-button color="primary" type="button" (click)="facade.toggleReminder(reservation)"
+            [matTooltip]="reservation.remindersSent ? 'Desactivar recordatorio' : 'Enviar recordatorio'">
+            <mat-icon>{{ reservation.remindersSent ? 'notifications_off' : 'notifications_active' }}</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" type="button" (click)="facade.cancel(reservation)"
+            matTooltip="Cancelar turno">
+            <mat-icon>cancel</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="facade.playerColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: facade.playerColumns"></tr>
+    </table>
+  </mat-card>
+
+  <mat-card class="mat-elevation-z2" *ngIf="facade.myHistoryReservations$ | async as history">
+    <header class="card-header">
+      <div>
+        <h3>Historial</h3>
+        <p>Consultá reservas pasadas, canceladas o completadas.</p>
+      </div>
+    </header>
+    <p *ngIf="!history.length" class="empty-state">Todavía no hay historial para mostrar.</p>
+    <table mat-table *ngIf="history.length" [dataSource]="history" [trackBy]="facade.trackById"
+      class="mat-elevation-z1">
+      <ng-container matColumnDef="date">
+        <th mat-header-cell *matHeaderCellDef>Fecha</th>
+        <td mat-cell *matCellDef="let reservation">{{ reservation.date | date: 'dd/MM/yyyy' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="court">
+        <th mat-header-cell *matHeaderCellDef>Cancha</th>
+        <td mat-cell *matCellDef="let reservation">{{ reservation.courtName }}</td>
+      </ng-container>
+      <ng-container matColumnDef="time">
+        <th mat-header-cell *matHeaderCellDef>Horario</th>
+        <td mat-cell *matCellDef="let reservation">
+          {{ reservation.startTime }} - {{ reservation.endTime }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let reservation">
+          <span class="status-chip" [ngClass]="facade.statusClass(reservation)">
+            {{ facade.getStatusLabel(reservation.status) }}
+          </span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="deposit">
+        <th mat-header-cell *matHeaderCellDef>Seña</th>
+        <td mat-cell *matCellDef="let reservation">
+          {{ reservation.deposit | currency: 'ARS':'symbol':'1.0-0' }}
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="facade.historyColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: facade.historyColumns"></tr>
+    </table>
+  </mat-card>
+</section>

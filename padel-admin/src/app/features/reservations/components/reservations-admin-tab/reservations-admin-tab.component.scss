@@ -1,0 +1,22 @@
+@import "../shared/reservations-common";
+
+:host {
+  display: block;
+}
+
+.admin-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-form .full-width {
+  grid-column: 1 / -1;
+}

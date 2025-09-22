@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.page-header__titles h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.subtitle {
+  margin: 0.25rem 0 1rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.role-toggle {
+  align-self: flex-end;
+}
+
+.selected-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background-color: rgba(63, 81, 181, 0.08);
+  color: #3f51b5;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .page-header__titles h1 {
+    font-size: 1.75rem;
+  }
+}
