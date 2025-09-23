@@ -32,9 +32,9 @@
             <mat-option *ngFor="let time of timeOptions" [value]="time">{{ time }}</mat-option>
             <mat-option *ngIf="!timeOptions.length" disabled>
               {{
-                facade.reservationForm.controls.courtId.value
-                  ? 'Sin horarios disponibles para la selección elegida'
-                  : 'Seleccioná una cancha para ver horarios'
+              facade.reservationForm.controls.courtId.value
+              ? 'Sin horarios disponibles para la selección elegida'
+              : 'Seleccioná una cancha para ver horarios'
               }}
             </mat-option>
           </ng-container>
@@ -121,4 +121,3 @@
     </div>
   </mat-card>
 </section>
-

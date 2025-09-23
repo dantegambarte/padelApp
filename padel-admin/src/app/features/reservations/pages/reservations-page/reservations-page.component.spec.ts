@@ -11,7 +11,7 @@ describe('ReservationsPageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ReservationsPageComponent, NoopAnimationsModule],
     }).compileComponents();
-    
+
     fixture = TestBed.createComponent(ReservationsPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

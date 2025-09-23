@@ -20,7 +20,7 @@ import { MatListModule } from '@angular/material/list';
     MatListModule,
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
 })
 export class AppComponent {
   title = 'padel-admin';

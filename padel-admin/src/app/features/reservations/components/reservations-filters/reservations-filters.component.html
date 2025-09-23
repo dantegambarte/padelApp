@@ -50,15 +50,34 @@
       </mat-select>
     </mat-form-field>
 
-    <div class="date-range" formGroupName="range">
-      <mat-form-field appearance="outline">
+    <div class="date-range" formGroupName="range" *ngIf="facade.viewMode$ | async as viewMode">
+      <!-- DÍA -->
+      <mat-form-field appearance="outline" *ngIf="viewMode === 'day'">
+        <mat-label>Día</mat-label>
+        <input matInput formControlName="start" [matDatepicker]="dayPicker" placeholder="Seleccioná un día" readonly />
+        <mat-datepicker-toggle matSuffix [for]="dayPicker"></mat-datepicker-toggle>
+        <mat-datepicker #dayPicker></mat-datepicker>
+      </mat-form-field>
+
+      <!-- SEMANA (rango libre: desde / hasta) -->
+      <mat-form-field appearance="outline" *ngIf="viewMode === 'week'">
         <mat-label>Rango de fechas</mat-label>
-        <mat-date-range-input [rangePicker]="picker">
+        <mat-date-range-input [rangePicker]="weekPicker">
           <input matStartDate formControlName="start" placeholder="Desde" />
           <input matEndDate formControlName="end" placeholder="Hasta" />
         </mat-date-range-input>
-        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-        <mat-date-range-picker #picker></mat-date-range-picker>
+        <mat-datepicker-toggle matSuffix [for]="weekPicker"></mat-datepicker-toggle>
+        <mat-date-range-picker #weekPicker></mat-date-range-picker>
+      </mat-form-field>
+
+      <!-- MES -->
+      <mat-form-field appearance="outline" *ngIf="viewMode === 'month'">
+        <mat-label>Mes</mat-label>
+        <input matInput formControlName="start" [matDatepicker]="monthPicker" placeholder="Elegí un mes" readonly />
+        <mat-datepicker-toggle matSuffix [for]="monthPicker"></mat-datepicker-toggle>
+        <mat-datepicker #monthPicker startView="multi-year" (monthSelected)="onMonthSelected($event, monthPicker)"
+          panelClass="month-picker"></mat-datepicker>
+        <mat-hint>Seleccioná mes y año</mat-hint>
       </mat-form-field>
     </div>
 

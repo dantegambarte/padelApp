@@ -1,5 +1,8 @@
 import { Court } from '../../../shared/models/court';
-import { Reservation, ReservationStatus } from '../../../shared/models/reservation';
+import {
+  Reservation,
+  ReservationStatus,
+} from '../../../shared/models/reservation';
 
 export type CalendarViewMode = 'month' | 'week' | 'day';
 
@@ -51,4 +54,3 @@ export interface FilterFormValue {
   range: { start: Date | null; end: Date | null } | null;
   search: string | null;
 }
-

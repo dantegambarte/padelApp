@@ -141,12 +141,7 @@ export class ReservationService {
       startTime: '19:00',
       endTime: '20:00',
       durationMinutes: 60,
-      players: [
-        'Marcelo Funes',
-        'Diego Ramírez',
-        'Sergio Peña',
-        'Alan Farías',
-      ],
+      players: ['Marcelo Funes', 'Diego Ramírez', 'Sergio Peña', 'Alan Farías'],
       contactName: 'Marcelo Funes',
       contactEmail: 'marcelo@example.com',
       totalPrice: 15000,

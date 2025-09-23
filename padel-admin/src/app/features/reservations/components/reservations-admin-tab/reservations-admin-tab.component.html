@@ -60,9 +60,9 @@
             <mat-option *ngFor="let time of timeOptions" [value]="time">{{ time }}</mat-option>
             <mat-option *ngIf="!timeOptions.length" disabled>
               {{
-                facade.blockForm.controls.courtId.value
-                  ? 'No hay horarios libres para este turno fijo'
-                  : 'Seleccioná una cancha para ver horarios'
+              facade.blockForm.controls.courtId.value
+              ? 'No hay horarios libres para este turno fijo'
+              : 'Seleccioná una cancha para ver horarios'
               }}
             </mat-option>
           </ng-container>

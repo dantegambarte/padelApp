@@ -114,20 +114,20 @@
                         ? 'Reservar este horario'
                         : (slot.reservation?.contactName || 'Ocupado')
                     ">
-                  <div style="display: flex; align-items: center;">
-                    <mat-icon *ngIf="slot.status === 'available'" style="margin-right: 8px;">check_circle</mat-icon>
-                    <mat-icon *ngIf="slot.status === 'reserved'" style="margin-right: 8px;">event_busy</mat-icon>
-                    <mat-icon *ngIf="slot.status === 'deposit'" style="margin-right: 8px;">verified</mat-icon>
-                    <mat-icon *ngIf="slot.status === 'blocked'" style="margin-right: 8px;">block</mat-icon>
-                    <span>
-                      {{ slot.startTime }} - {{ slot.endTime }}
-                      <span class="fixed-turn-label" *ngIf="slot.reservation?.fixedTurn">· Turno fijo</span>
-                    </span>
-                  </div>
-                </mat-chip>
-              </mat-chip-set>
-            </div>
-          </mat-expansion-panel>
+                    <div style="display: flex; align-items: center;">
+                      <mat-icon *ngIf="slot.status === 'available'" style="margin-right: 8px;">check_circle</mat-icon>
+                      <mat-icon *ngIf="slot.status === 'reserved'" style="margin-right: 8px;">event_busy</mat-icon>
+                      <mat-icon *ngIf="slot.status === 'deposit'" style="margin-right: 8px;">verified</mat-icon>
+                      <mat-icon *ngIf="slot.status === 'blocked'" style="margin-right: 8px;">block</mat-icon>
+                      <span>
+                        {{ slot.startTime }} - {{ slot.endTime }}
+                        <span class="fixed-turn-label" *ngIf="slot.reservation?.fixedTurn">· Turno fijo</span>
+                      </span>
+                    </div>
+                  </mat-chip>
+                </mat-chip-set>
+              </div>
+            </mat-expansion-panel>
           </mat-accordion>
         </ng-container>
       </mat-card>
